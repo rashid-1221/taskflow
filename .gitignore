@@ -1,0 +1,14 @@
+# Système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Sauvegardes locales (trop volumineuses pour git)
+sauvegarde/
+
+# Config locale
+.env
+*.local
+
+# Logs
+*.log
