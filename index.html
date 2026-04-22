@@ -1098,6 +1098,13 @@
   .task-btn.move-edge { color: var(--text3); font-size:.75rem; padding:2px 6px; }
   .task-btn.move-edge:hover { color: var(--accent); }
 
+  /* ── Planifiée badge ── */
+  .task-card.planned-card { border-left: 3px solid var(--q2-color); }
+  .task-card.planned-card .task-top::before {
+    content: '📌'; font-size:.7rem; margin-right:4px; flex-shrink:0;
+  }
+  .planned-active { color: var(--q2-color) !important; font-weight:700; }
+
   /* ── Seen today badge on matrix cards ── */
   .task-card.seen-today .task-top::after {
     content: '👁 Vu'; font-size:.62rem; color:var(--q2-color);
@@ -1957,7 +1964,7 @@ function renderQuad(q, filtered) {
 
 function makeCard(t) {
   const div = document.createElement('div');
-  div.className = 'task-card' + (t.status==='done'?' done':'') + (matrixSelected.has(t.id)?' mat-selected':'');
+  div.className = 'task-card' + (t.status==='done'?' done':'') + (matrixSelected.has(t.id)?' mat-selected':'') + (t.planned?' planned-card':'');
   div.draggable = true;
   div.dataset.id = t.id;
 
@@ -2055,6 +2062,8 @@ function makeCard(t) {
       <button class="task-btn today-btn-card" onclick="sendToToday('${t.id}',event)">${alreadyToday?'☀️✓':'☀️ Aujourd\'hui'}</button>
       <button class="task-btn" onclick="toggleSeenToday('${t.id}',event)" title="${seenToday?'Retirer marque vue':'Marquer comme vu aujourd\'hui'}" style="color:${seenToday?'var(--q2-color)':'var(--text3)'}">${seenToday?'👁 Vu':'👁'}</button>
       <button class="task-btn" onclick="snoozeTask('${t.id}',event)" style="color:var(--text3)">📦 1 sem.</button>
+      <button class="task-btn" onclick="copyTaskTitle('${t.id}',event)" title="Copier le titre">📋 Copier</button>
+      <button class="task-btn ${t.planned?'planned-active':''}" onclick="togglePlanned('${t.id}',event)" title="${t.planned?'Retirer planifiée':'Marquer comme planifiée'}" style="color:${t.planned?'var(--q2-color)':'var(--text3)'}">📌${t.planned?' Planifiée':''}</button>
       <button class="task-btn" onclick="addToCalendar('${t.id}')" title="Ajouter à Google Agenda" style="color:var(--q2-color)">📅 Agenda</button>
       <button class="task-btn" onclick="archiveTask('${t.id}',event)" style="color:var(--text3)" title="Archiver cette note">🗃 Archiver</button>
       <button class="task-btn danger" onclick="deleteTask('${t.id}',event)" title="Supprimer (récupérable 7j)">🗑</button>
@@ -2367,6 +2376,7 @@ function makeTodayItem(t) {
       </select>
       <button class="ti-comment-btn" onclick="toggleTiCommentForm('${t.id}')">💬 Note</button>
       <button class="ti-comment-btn" onclick="openEditFromToday('${t.id}',event)">✏️ Éditer</button>
+      <button class="ti-comment-btn" onclick="copyTodayTitle('${t.id}')">📋 Copier</button>
       <button class="ti-comment-btn" onclick="addTodayToCalendar('${t.id}')" style="color:var(--q2-color)" title="Ajouter à Google Agenda">📅 Agenda</button>
       <button class="ti-del-btn" style="color:var(--text3)" onclick="archiveTodayTask('${t.id}')">🗃 Archiver</button>
       <button class="ti-del-btn" onclick="deleteTodayTask('${t.id}')">🗑 Supprimer</button>
@@ -3581,6 +3591,38 @@ async function syncPull() {
 }
 
 // ═══════════════════════════════════════════════
+//  COPIER TITRE
+// ═══════════════════════════════════════════════
+function copyTitle(text, e) {
+  if (e) e.stopPropagation();
+  navigator.clipboard.writeText(text).then(() => toast('📋 Titre copié !', 'success')).catch(() => {
+    // Fallback pour Android/anciens navigateurs
+    const el = document.createElement('textarea');
+    el.value = text; el.style.position='fixed'; el.style.opacity='0';
+    document.body.appendChild(el); el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    toast('📋 Titre copié !', 'success');
+  });
+}
+function copyTaskTitle(id, e)     { const t=tasks.find(x=>x.id===id); if(t) copyTitle(t.title,e); }
+function copyTodayTitle(id)        { const t=todayTasks.find(x=>x.id===id); if(t) copyTitle(t.title); }
+function copyFreeNoteTitle(id)     { const n=freeNotes.find(x=>x.id===id); if(n) copyTitle(n.title||n.body?.split('\n')[0]||''); }
+
+// ═══════════════════════════════════════════════
+//  PLANIFIÉE
+// ═══════════════════════════════════════════════
+function togglePlanned(id, e) {
+  if (e) e.stopPropagation();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  pushHistory(`${t.planned?'Déplanifiée':'Planifiée'} "${t.title}"`);
+  t.planned = !t.planned;
+  save(); renderAll();
+  toast(t.planned ? '📌 Marquée comme planifiée' : 'Retirée des planifiées', 'info');
+}
+
+// ═══════════════════════════════════════════════
 //  GOOGLE CALENDAR INTEGRATION
 // ═══════════════════════════════════════════════
 function openGoogleCalendar(title, desc, dueDate) {
@@ -4686,6 +4728,7 @@ function renderFreeNotes() {
       <div class="free-note-footer">
         <span>${new Date(n.updatedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
         <div style="display:flex;gap:6px;">
+          <button class="free-note-del" onclick="copyFreeNoteTitle('${n.id}')">📋 Copier</button>
           <button class="free-note-del" onclick="addFreeNoteToCalendar('${n.id}')" style="color:var(--q2-color)">📅 Agenda</button>
           <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
         </div>
