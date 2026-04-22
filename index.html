@@ -282,78 +282,23 @@
   }
 
   /* ── SOUS-NOTES INLINE ── */
-  .subnotes-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 6px;
-  }
-  .subnote-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 4px 8px;
-    background: var(--bg4);
-    border-left: 2px solid var(--accent);
-    border-radius: 0 5px 5px 0;
-    animation: slideIn .15s ease;
-  }
-  .subnote-item.sn-done .subnote-text {
-    text-decoration: line-through;
-    color: var(--text3);
-  }
-  .sn-bullet {
-    width: 13px; height: 13px;
-    border: 1.5px solid var(--border);
-    border-radius: 3px;
-    flex-shrink: 0;
-    margin-top: 1px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .55rem;
-    transition: var(--trans);
-  }
-  .sn-bullet:hover { border-color: var(--q2-color); }
-  .subnote-item.sn-done .sn-bullet { background: var(--q2-color); border-color: var(--q2-color); color: #000; }
-  .subnote-text {
-    flex: 1;
-    font-size: .75rem;
-    color: var(--text2);
-    line-height: 1.4;
-    word-break: break-word;
-  }
-  .sn-del {
-    background: none; border: none;
-    color: var(--text3); font-size: .65rem;
-    cursor: pointer; padding: 0 2px;
-    opacity: 0; transition: var(--trans);
-    flex-shrink: 0; line-height: 1;
-  }
-  .subnote-item:hover .sn-del { opacity: 1; }
-  .sn-del:hover { color: var(--q1-color); }
+  .subnotes-list { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
+  .subnote-item { display:flex; align-items:flex-start; gap:6px; padding:4px 8px;
+    background:var(--bg4); border-left:2px solid var(--accent); border-radius:0 5px 5px 0; }
+  .subnote-item.sn-done .subnote-text { text-decoration:line-through; color:var(--text3); }
+  .sn-bullet { width:13px; height:13px; border:1.5px solid var(--border); border-radius:3px;
+    flex-shrink:0; margin-top:1px; cursor:pointer; display:flex; align-items:center;
+    justify-content:center; font-size:.55rem; transition:var(--trans); }
+  .sn-bullet:hover { border-color:var(--q2-color); }
+  .subnote-item.sn-done .sn-bullet { background:var(--q2-color); border-color:var(--q2-color); color:#000; }
+  .subnote-text { flex:1; font-size:.75rem; color:var(--text2); line-height:1.4; word-break:break-word; }
+  .sn-del { background:none; border:none; color:var(--text3); font-size:.65rem; cursor:pointer;
+    padding:0 2px; opacity:0; transition:var(--trans); flex-shrink:0; }
+  .subnote-item:hover .sn-del { opacity:1; }
+  .sn-del:hover { color:var(--q1-color); }
+  .ti-subnotes-list { display:flex; flex-direction:column; gap:4px; margin:5px 0 3px 27px; }
 
-  /* Inline add-subnote form */
-  .subnote-add-form {
-    display: none;
-    gap: 5px;
-    margin-top: 5px;
-    align-items: center;
-  }
-  .subnote-add-form.open { display: flex; }
-  .subnote-input {
-    flex: 1;
-    background: var(--bg4);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    color: var(--text);
-    padding: 4px 9px;
-    font-size: .75rem;
-    outline: none;
-    transition: var(--trans);
-    font-family: inherit;
-  }
-  .subnote-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(88,166,255,.1); }
-  .subnote-input::placeholder { color: var(--text3); }
+  /* Boutons inline (edit form today) */
   .subnote-ok {
     background: rgba(88,166,255,.15);
     border: 1px solid rgba(88,166,255,.35);
@@ -374,11 +319,6 @@
     transition: var(--trans);
   }
   .subnote-cancel:hover { color: var(--q1-color); }
-
-  /* Same for today items */
-  .ti-subnotes-list { display:flex; flex-direction:column; gap:4px; margin: 5px 0 3px 27px; }
-  .ti-subnote-add-form { display:none; gap:5px; margin: 4px 0 2px 27px; align-items:center; }
-  .ti-subnote-add-form.open { display:flex; }
 
   .task-actions { display:flex; gap:4px; margin-top:5px; opacity:0; transition:var(--trans); flex-wrap:wrap; }
   .task-card:hover .task-actions { opacity:1; }
@@ -2047,7 +1987,6 @@ function makeCard(t) {
       <button class="task-btn move-btn" onclick="moveTaskInQuad('${t.id}',-1,event)" title="Monter">▲</button>
       <button class="task-btn move-btn" onclick="moveTaskInQuad('${t.id}',+1,event)" title="Descendre">▼</button>
       <button class="task-btn move-btn move-edge" onclick="moveTaskToBottom('${t.id}',event)" title="Fin de la matrice">⤓</button>
-      <button class="task-btn" onclick="openSubnoteForm('${t.id}',event)">📝 Sous-note</button>
       <button class="task-btn" onclick="openEdit('${t.id}',event)">✏️ Éditer</button>
       <button class="task-btn" onclick="openMove('${t.id}',event)">↗ Déplacer</button>
       <button class="task-btn today-btn-card" onclick="sendToToday('${t.id}',event)">${alreadyToday?'☀️✓':'☀️ Aujourd\'hui'}</button>
@@ -2385,7 +2324,6 @@ function makeTodayItem(t) {
         <option value="q3">🤝 Q3 — Urgent &amp; Non Important · Déléguer</option>
         <option value="q4">🗑️ Q4 — Non Urgent &amp; Non Important · Éliminer</option>
       </select>
-      <button class="ti-comment-btn" onclick="openTiSubnoteForm('${t.id}',event)">📝 Sous-note</button>
       <button class="ti-comment-btn" onclick="toggleTiCommentForm('${t.id}')">💬 Note</button>
       <button class="ti-comment-btn" onclick="openEditFromToday('${t.id}',event)">✏️ Éditer</button>
       <button class="ti-del-btn" style="color:var(--text3)" onclick="archiveTodayTask('${t.id}')">🗃 Archiver</button>
