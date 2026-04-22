@@ -1111,6 +1111,44 @@
     font-size:.75rem; cursor:pointer; transition:var(--trans);
   }
   .btn-mark-all-seen:hover { background:rgba(63,185,80,.25); }
+
+  /* ══════════ FREE NOTES ══════════ */
+  .free-note-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    transition: var(--trans); position: relative;
+  }
+  .free-note-card:hover { border-color: var(--accent); }
+  .free-note-title {
+    width: 100%; background: none; border: none; border-bottom: 1px solid var(--border);
+    color: var(--text); font-size: .9rem; font-weight: 700;
+    padding: 0 0 6px 0; outline: none; font-family: inherit;
+  }
+  .free-note-title:focus { border-bottom-color: var(--accent); }
+  .free-note-body {
+    width: 100%; background: none; border: none;
+    color: var(--text2); font-size: .82rem; line-height: 1.6;
+    resize: vertical; min-height: 90px; outline: none; font-family: inherit;
+  }
+  .free-note-body:focus { color: var(--text); }
+  .free-note-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: .68rem; color: var(--text3); margin-top: 4px;
+  }
+  .free-note-del {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: .75rem; padding: 2px 6px;
+    border-radius: 4px; transition: var(--trans);
+  }
+  .free-note-del:hover { color: var(--q1-color); background: rgba(248,81,73,.1); }
+
+  .qcp-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    cursor: pointer; border: 2px solid transparent;
+    transition: var(--trans);
+  }
+  .qcp-dot.selected { border-color: var(--text); transform: scale(1.2); }
 </style>
 
 <!-- ▶ Script exécuté avant tout rendu : applique ordre/taille des quadrants depuis localStorage
@@ -1163,6 +1201,10 @@
     <button class="nav-tab today-tab" id="tab-today" onclick="switchView('today')">
       ☀️ Aujourd'hui
       <span class="nav-tab-badge" id="tab-badge-today">0</span>
+    </button>
+    <button class="nav-tab" id="tab-notes" onclick="switchView('notes')">
+      📓 Notes
+      <span class="nav-tab-badge" id="tab-badge-notes">0</span>
     </button>
   </div>
 
@@ -1426,6 +1468,14 @@
       <div class="snooze-body" id="snooze-body"></div>
     </div>
   </main>
+
+  <!-- Custom quadrants row -->
+  <div style="max-width:1400px;margin:0 auto;padding:0 24px 14px;">
+    <div id="custom-quads-row" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;"></div>
+    <div style="padding:4px 0 8px;">
+      <button class="filter-chip" onclick="openAddQuadModal()" style="border-style:dashed;color:var(--text3)">⊕ Ajouter une matrice</button>
+    </div>
+  </div>
 </div><!-- /view-matrice -->
 
 <!-- ═══════════ VIEW AUJOURD'HUI ═══════════ -->
@@ -1479,6 +1529,22 @@
 
   </div>
 </div><!-- /view-today -->
+
+<!-- ═══════════ VIEW NOTES ═══════════ -->
+<div class="view" id="view-notes">
+  <div style="max-width:900px;margin:0 auto;padding:24px 16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <h2 style="font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">📓 Notes libres</h2>
+      <button class="btn-icon" onclick="addFreeNote()" style="color:var(--q2-color);border-color:rgba(63,185,80,.35)">＋ Nouvelle note</button>
+    </div>
+    <div id="free-notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;"></div>
+    <div id="free-notes-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3);">
+      <div style="font-size:2.5rem;margin-bottom:12px;">📓</div>
+      <div style="font-size:.9rem;">Aucune note pour l'instant</div>
+      <div style="font-size:.75rem;margin-top:6px;">Cliquez sur "+ Nouvelle note" pour commencer</div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════ MODALS ═══════════ -->
 
@@ -1811,6 +1877,8 @@ function switchView(v) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + v).classList.add('active');
   if (v === 'today') { renderToday(); }
+  if (v === 'notes') { renderFreeNotes(); }
+  if (v === 'matrice') { renderCustomQuads(); }
 }
 
 // ═══════════════════════════════════════════════
@@ -1848,6 +1916,7 @@ function renderAll() {
   updateTabBadges();
   applyQuadOrder();
   applyQuadSizes();
+  renderCustomQuads();
   if (currentView === 'today') renderToday();
 }
 
@@ -1974,14 +2043,8 @@ function makeCard(t) {
     <div class="task-meta">
       ${t.tag ? `<span class="task-tag tag-${t.tag}">${tagLabel(t.tag)}</span>` : ''}
       ${due    ? `<span class="task-due ${due.cls}">📅 ${due.text}</span>` : ''}
-      ${t.subnotes.length ? `<span style="font-size:.65rem;color:var(--text3)">📝${t.subnotes.filter(s=>!s.done).length}/${t.subnotes.length}</span>` : ''}
     </div>
     ${subnotesHtml}
-    <div class="subnote-add-form" id="snf-${t.id}">
-      <input class="subnote-input" id="sni-input-${t.id}" placeholder="Ajouter une sous-note…" />
-      <button class="subnote-ok"     onclick="saveSubnote('${t.id}',event)">＋ OK</button>
-      <button class="subnote-cancel" onclick="closeSubnoteForm('${t.id}',event)">✕</button>
-    </div>
     <div class="task-actions">
       <button class="task-btn move-btn move-edge" onclick="moveTaskToTop('${t.id}',event)" title="Début de la matrice">⤒</button>
       <button class="task-btn move-btn" onclick="moveTaskInQuad('${t.id}',-1,event)" title="Monter">▲</button>
@@ -1992,15 +2055,10 @@ function makeCard(t) {
       <button class="task-btn today-btn-card" onclick="sendToToday('${t.id}',event)">${alreadyToday?'☀️✓':'☀️ Aujourd\'hui'}</button>
       <button class="task-btn" onclick="toggleSeenToday('${t.id}',event)" title="${seenToday?'Retirer marque vue':'Marquer comme vu aujourd\'hui'}" style="color:${seenToday?'var(--q2-color)':'var(--text3)'}">${seenToday?'👁 Vu':'👁'}</button>
       <button class="task-btn" onclick="snoozeTask('${t.id}',event)" style="color:var(--text3)">📦 1 sem.</button>
+      <button class="task-btn" onclick="addToCalendar('${t.id}')" title="Ajouter à Google Agenda" style="color:var(--q2-color)">📅 Agenda</button>
       <button class="task-btn" onclick="archiveTask('${t.id}',event)" style="color:var(--text3)" title="Archiver cette note">🗃 Archiver</button>
       <button class="task-btn danger" onclick="deleteTask('${t.id}',event)" title="Supprimer (récupérable 7j)">🗑</button>
     </div>`;
-
-  // Enter key in subnote input
-  div.querySelector(`#sni-input-${t.id}`)?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); saveSubnote(t.id, e); }
-    if (e.key === 'Escape') { e.preventDefault(); closeSubnoteForm(t.id, e); }
-  });
 
   return div;
 }
@@ -2273,17 +2331,6 @@ function makeTodayItem(t) {
   const lastNote = t.notes?.length ? t.notes[t.notes.length-1] : null;
   if (!t.subnotes) t.subnotes = [];
 
-  const tiSubnotesHtml = t.subnotes.length
-    ? `<div class="subnotes-list ti-subnotes-list" id="ti-snl-${t.id}">
-        ${t.subnotes.map((sn,i)=>`
-          <div class="subnote-item${sn.done?' sn-done':''}" id="ti-sni-${t.id}-${i}">
-            <div class="sn-bullet" onclick="toggleTiSubnote('${t.id}',${i},event)">${sn.done?'✓':''}</div>
-            <span class="subnote-text">${escHtml(sn.text)}</span>
-            <button class="sn-del" onclick="deleteTiSubnote('${t.id}',${i},event)">✕</button>
-          </div>`).join('')}
-       </div>`
-    : `<div class="subnotes-list ti-subnotes-list" id="ti-snl-${t.id}"></div>`;
-
   if (todaySelected.has(t.id)) wrap.classList.add('ti-selected');
 
   wrap.innerHTML = `
@@ -2296,12 +2343,6 @@ function makeTodayItem(t) {
       <button class="ti-reviewed-btn${t.reviewed?' reviewed':''}" onclick="toggleTodayReviewed('${t.id}')" title="${t.reviewed?'Marquer comme non revu':'Marquer comme revu aujourd\'hui'}">${t.reviewed?'👁 Revu':'👁'}</button>
     </div>
     ${lastNote ? `<div class="ti-comment-preview">💬 ${escHtml(lastNote.text)}</div>` : ''}
-    ${tiSubnotesHtml}
-    <div class="subnote-add-form ti-subnote-add-form" id="ti-snf-${t.id}">
-      <input class="subnote-input" id="ti-sni-input-${t.id}" placeholder="Ajouter une sous-note…" />
-      <button class="subnote-ok"     onclick="saveTiSubnote('${t.id}',event)">＋ OK</button>
-      <button class="subnote-cancel" onclick="closeTiSubnoteForm('${t.id}',event)">✕</button>
-    </div>
     <div class="ti-comment-form" id="tcf-${t.id}">
       <input class="ti-comment-input" type="text" id="tci-${t.id}" placeholder="Note rapide…" />
       <button class="ti-comment-save" onclick="saveTiInlineComment('${t.id}')">OK</button>
@@ -2326,6 +2367,7 @@ function makeTodayItem(t) {
       </select>
       <button class="ti-comment-btn" onclick="toggleTiCommentForm('${t.id}')">💬 Note</button>
       <button class="ti-comment-btn" onclick="openEditFromToday('${t.id}',event)">✏️ Éditer</button>
+      <button class="ti-comment-btn" onclick="addTodayToCalendar('${t.id}')" style="color:var(--q2-color)" title="Ajouter à Google Agenda">📅 Agenda</button>
       <button class="ti-del-btn" style="color:var(--text3)" onclick="archiveTodayTask('${t.id}')">🗃 Archiver</button>
       <button class="ti-del-btn" onclick="deleteTodayTask('${t.id}')">🗑 Supprimer</button>
     </div>`;
@@ -2944,8 +2986,15 @@ function saveToServer(type) {
   })
   .catch(() => {
     if (type === 'manual') {
-      saveBackupFile(true);
-      toast('💾 Sauvegardé en local (serveur non disponible)', 'info');
+      // Si Gist configuré → sync cloud, sinon téléchargement
+      const token  = localStorage.getItem(SYNC_TOKEN_KEY);
+      const gistId = localStorage.getItem(SYNC_GIST_KEY);
+      if (token) {
+        syncPush();
+      } else {
+        saveBackupFile(true);
+        toast('💾 Téléchargé — configurez ☁️ Sync pour sauvegarder dans le cloud', 'info');
+      }
     }
   });
 }
@@ -3529,6 +3578,42 @@ async function syncPull() {
   } finally {
     document.getElementById('btn-sync-header').classList.remove('syncing');
   }
+}
+
+// ═══════════════════════════════════════════════
+//  GOOGLE CALENDAR INTEGRATION
+// ═══════════════════════════════════════════════
+function openGoogleCalendar(title, desc, dueDate) {
+  const enc  = s => encodeURIComponent(s || '');
+  let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${enc(title)}`;
+  if (desc)    url += `&details=${enc(desc)}`;
+  if (dueDate) {
+    const d = dueDate.replace(/-/g,'');
+    const next = String(parseInt(d) + 1).padStart(8,'0');
+    url += `&dates=${d}/${next}`;
+  }
+  window.open(url, '_blank');
+  toast('📅 Google Agenda ouvert', 'success');
+}
+
+function addToCalendar(taskId) {
+  const t = tasks.find(x => x.id === taskId);
+  if (!t) return;
+  openGoogleCalendar(t.title, t.desc || '', t.due || '');
+}
+
+function addTodayToCalendar(todayId) {
+  const t = todayTasks.find(x => x.id === todayId);
+  if (!t) return;
+  // Try to get due from original matrix task
+  const orig = t.originTaskId ? tasks.find(x => x.id === t.originTaskId) : null;
+  openGoogleCalendar(t.title, '', orig?.due || '');
+}
+
+function addFreeNoteToCalendar(noteId) {
+  const n = freeNotes.find(x => x.id === noteId);
+  if (!n) return;
+  openGoogleCalendar(n.title || 'Note sans titre', n.body || '', '');
 }
 
 // Restore sync indicator on page load
@@ -4223,14 +4308,11 @@ function loadTodayDemoIfEmpty() {
 //  FEATURE 1: Inline quad add
 // ═══════════════════════════════════════════════
 function openQuadAdd(q) {
-  ['q1','q2','q3','q4'].forEach(x => {
-    const f = document.getElementById('qadd-'+x);
-    if (f) f.classList.remove('open');
-  });
+  document.querySelectorAll('.q-inline-add').forEach(f => f.classList.remove('open'));
   const form = document.getElementById('qadd-'+q);
   if (!form) return;
   form.classList.add('open');
-  const inp = document.getElementById('qadd-input-'+q);
+  const inp = document.getElementById('qadd-input-'+q) || document.getElementById('qi-'+q);
   if (inp) { inp.value = ''; inp.focus(); }
 }
 function closeQuadAdd(q) {
@@ -4238,15 +4320,17 @@ function closeQuadAdd(q) {
   if (form) form.classList.remove('open');
 }
 function submitQuadAdd(q) {
-  const inp = document.getElementById('qadd-input-'+q);
+  const inp = document.getElementById('qadd-input-'+q) || document.getElementById('qi-'+q);
   if (!inp) return;
   const title = inp.value.trim();
   if (!title) { inp.focus(); return; }
-  pushHistory(`Ajout "${title}" dans ${QUADS[q].label.split('—')[0]}`);
+  const qInfo = QUADS[q] || customQuads.find(x => x.id === q);
+  const qLabel = qInfo ? (qInfo.label.split('—')[0] || qInfo.label) : q;
+  pushHistory(`Ajout "${title}" dans ${qLabel}`);
   tasks.push({ id:uid(), title, desc:'', quad:q, tag:'', due:'', status:'pending', comments:[], subnotes:[], createdAt:Date.now() });
-  save(); renderAll();
+  save(); renderAll(); renderCustomQuads();
   closeQuadAdd(q);
-  toast(`Tâche ajoutée dans ${QUADS[q].label.split('—')[0]} ✓`, 'success');
+  toast(`Tâche ajoutée dans ${qLabel} ✓`, 'success');
 }
 
 // ═══════════════════════════════════════════════
@@ -4540,7 +4624,176 @@ applyQuadSizes();
 checkAutoSave();
 checkDailyAutoBackup();
 updateLoginHeader();
+updateFreeNotesBadge();
 setTimeout(checkStaleDoneTasks, 600);
+
+// ═══════════════════════════════════════════════
+//  FREE NOTES
+// ═══════════════════════════════════════════════
+let freeNotes = JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]');
+
+function saveFreeNotes() {
+  localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
+  updateFreeNotesBadge();
+}
+
+function updateFreeNotesBadge() {
+  const el = document.getElementById('tab-badge-notes');
+  if (el) el.textContent = freeNotes.length;
+}
+
+function addFreeNote() {
+  const note = { id: uid(), title: '', body: '', createdAt: Date.now(), updatedAt: Date.now() };
+  freeNotes.unshift(note);
+  saveFreeNotes();
+  renderFreeNotes();
+  // Focus the title of the first card
+  setTimeout(() => document.querySelector('.free-note-title')?.focus(), 50);
+}
+
+function deleteFreeNote(id) {
+  freeNotes = freeNotes.filter(n => n.id !== id);
+  saveFreeNotes();
+  renderFreeNotes();
+}
+
+function updateFreeNote(id, field, value) {
+  const n = freeNotes.find(x => x.id === id);
+  if (!n) return;
+  n[field] = value;
+  n.updatedAt = Date.now();
+  saveFreeNotes();
+}
+
+function renderFreeNotes() {
+  const grid  = document.getElementById('free-notes-grid');
+  const empty = document.getElementById('free-notes-empty');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (!freeNotes.length) {
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  freeNotes.forEach(n => {
+    const card = document.createElement('div');
+    card.className = 'free-note-card';
+    card.innerHTML = `
+      <input  class="free-note-title" placeholder="Titre…" value="${escHtml(n.title)}"
+              oninput="updateFreeNote('${n.id}','title',this.value)" />
+      <textarea class="free-note-body" placeholder="Écrivez votre note ici…"
+                oninput="updateFreeNote('${n.id}','body',this.value)">${escHtml(n.body)}</textarea>
+      <div class="free-note-footer">
+        <span>${new Date(n.updatedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+        <div style="display:flex;gap:6px;">
+          <button class="free-note-del" onclick="addFreeNoteToCalendar('${n.id}')" style="color:var(--q2-color)">📅 Agenda</button>
+          <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+// Init on load
+document.addEventListener('DOMContentLoaded', () => {
+  updateFreeNotesBadge();
+});
+
+// ═══════════════════════════════════════════════
+//  CUSTOM QUADRANTS
+// ═══════════════════════════════════════════════
+let customQuads = JSON.parse(localStorage.getItem('taskflow_custom_quads') || '[]');
+let selectedQuadColor = '#9c59d1';
+
+function saveCustomQuads() {
+  localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
+}
+
+function openAddQuadModal() {
+  document.getElementById('new-quad-name').value = '';
+  selectedQuadColor = '#9c59d1';
+  document.querySelectorAll('.qcp-dot').forEach(d => d.classList.toggle('selected', d.dataset.color === selectedQuadColor));
+  document.getElementById('add-quad-modal').style.display = 'flex';
+}
+function closeAddQuadModal() {
+  document.getElementById('add-quad-modal').style.display = 'none';
+}
+function selectQuadColor(color, el) {
+  selectedQuadColor = color;
+  document.querySelectorAll('.qcp-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function confirmAddQuad() {
+  const name = document.getElementById('new-quad-name').value.trim();
+  if (!name) { toast('Entre un nom pour la matrice', 'error'); return; }
+  const id = 'cq' + Date.now();
+  customQuads.push({ id, label: name, color: selectedQuadColor });
+  saveCustomQuads();
+  closeAddQuadModal();
+  renderCustomQuads();
+  toast(`Matrice "${name}" créée ✓`, 'success');
+}
+function deleteCustomQuad(id) {
+  if (!confirm('Supprimer cette matrice ? Les notes qu\'elle contient seront déplacées en Q4.')) return;
+  tasks.forEach(t => { if (t.quad === id) t.quad = 'q4'; });
+  customQuads = customQuads.filter(q => q.id !== id);
+  save(); saveCustomQuads(); renderAll(); renderCustomQuads();
+}
+function renderCustomQuads() {
+  const row = document.getElementById('custom-quads-row');
+  if (!row) return;
+  row.innerHTML = '';
+  customQuads.forEach(cq => {
+    const shown = tasks.filter(t => t.quad === cq.id && t.status !== 'archived' && t.status !== 'deleted' && !t.inToday);
+    const div = document.createElement('div');
+    div.className = 'quadrant';
+    div.style.cssText = `flex:1;min-width:260px;border-top:3px solid ${cq.color};`;
+    div.innerHTML = `
+      <div class="q-header">
+        <div class="q-title" style="color:${cq.color}">${cq.label}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+          <span class="q-cnt" style="background:${cq.color}22;color:${cq.color}">${shown.length}</span>
+          <button class="q-ctrl-btn q-add-btn" onclick="openQuadAdd('${cq.id}')" style="color:${cq.color}">＋</button>
+          <button class="q-ctrl-btn" onclick="deleteCustomQuad('${cq.id}')" style="color:var(--text3);font-size:.7rem;" title="Supprimer la matrice">✕</button>
+        </div>
+      </div>
+      <div class="q-inline-add" id="qadd-${cq.id}">
+        <input class="q-inline-input" id="qi-${cq.id}" placeholder="Titre de la tâche…" />
+        <button class="subnote-ok" onclick="submitQuadAdd('${cq.id}')">＋ OK</button>
+        <button class="subnote-cancel" onclick="closeQuadAdd('${cq.id}')">✕</button>
+      </div>
+      <div class="q-body" id="body-${cq.id}"></div>`;
+    // Drag-drop support
+    div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
+    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+    div.addEventListener('drop', e => {
+      e.preventDefault(); div.classList.remove('drag-over');
+      if (!dragTaskId) return;
+      const t = tasks.find(x => x.id === dragTaskId);
+      if (t) { pushHistory(`Déplacée vers "${cq.label}"`); t.quad = cq.id; save(); renderAll(); renderCustomQuads(); }
+    });
+    row.appendChild(div);
+    // Render tasks
+    const body = div.querySelector(`#body-${cq.id}`);
+    if (!shown.length) {
+      body.innerHTML = `<div class="q-empty"><span class="q-empty-icon">📁</span>${cq.label}</div>`;
+    } else {
+      shown.forEach(t => body.appendChild(makeCard(t)));
+    }
+    // Keyboard on inline add
+    div.querySelector(`#qi-${cq.id}`)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); submitQuadAdd(cq.id); }
+      if (e.key === 'Escape') { e.preventDefault(); closeQuadAdd(cq.id); }
+    });
+  });
+}
+
+function getQuadInfo(quadId) {
+  if (QUADS[quadId]) return QUADS[quadId];
+  const cq = customQuads.find(q => q.id === quadId);
+  if (cq) return { label: cq.label, color: cq.color, dot: cq.color, icon: '📁', action: cq.label };
+  return null;
+}
 </script>
 
 <!-- ═══════════ SYNC MODAL ═══════════ -->
@@ -4600,6 +4853,32 @@ setTimeout(checkStaleDoneTasks, 600);
   <div class="ctx-item danger" onclick="ctxAction('delete')">🗑 Supprimer (corbeille 7j)</div>
   <div class="ctx-separator" id="ctx-sep-select"></div>
   <div class="ctx-item" id="ctx-select-all-quad" onclick="ctxAction('selectAllQuad')">☑ Sélectionner tout ce quadrant</div>
+</div>
+
+<!-- Add custom quad modal -->
+<div id="add-quad-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.7);align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px 32px;width:min(380px,94vw);display:flex;flex-direction:column;gap:14px;">
+    <h3 style="font-size:1rem;">⊕ Nouvelle matrice</h3>
+    <div>
+      <label style="font-size:.78rem;color:var(--text2);display:block;margin-bottom:4px;">Nom</label>
+      <input id="new-quad-name" class="sync-input" placeholder="Ex: Projets, En cours, Idées…" />
+    </div>
+    <div>
+      <label style="font-size:.78rem;color:var(--text2);display:block;margin-bottom:6px;">Couleur</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" id="quad-color-picker">
+        <div class="qcp-dot selected" data-color="#9c59d1" style="background:#9c59d1" onclick="selectQuadColor('#9c59d1',this)"></div>
+        <div class="qcp-dot" data-color="#0ea5e9" style="background:#0ea5e9" onclick="selectQuadColor('#0ea5e9',this)"></div>
+        <div class="qcp-dot" data-color="#f97316" style="background:#f97316" onclick="selectQuadColor('#f97316',this)"></div>
+        <div class="qcp-dot" data-color="#ec4899" style="background:#ec4899" onclick="selectQuadColor('#ec4899',this)"></div>
+        <div class="qcp-dot" data-color="#14b8a6" style="background:#14b8a6" onclick="selectQuadColor('#14b8a6',this)"></div>
+        <div class="qcp-dot" data-color="#8b949e" style="background:#8b949e" onclick="selectQuadColor('#8b949e',this)"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px;">
+      <button class="sync-btn primary" onclick="confirmAddQuad()">Créer</button>
+      <button class="sync-btn" onclick="closeAddQuadModal()">Annuler</button>
+    </div>
+  </div>
 </div>
 </body>
 </html>
