@@ -30,7 +30,7 @@ if (!$parsed) {
 }
 
 $type    = isset($req['type']) ? $req['type'] : 'manual';
-$baseDir = 'C:\\MAMP\\htdocs\\bourse de casablanca\\Claude\\Projet notes\\sauvegarde';
+$baseDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'sauvegarde';
 
 // Créer le dossier principal si nécessaire
 if (!is_dir($baseDir)) {
