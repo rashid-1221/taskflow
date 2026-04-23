@@ -1731,7 +1731,7 @@
       <!-- Tabs -->
       <div class="restore-tabs">
         <button class="restore-tab active" onclick="switchRestoreTab('file',this)">📂 Fichier local</button>
-        <button class="restore-tab"        onclick="switchRestoreTab('server',this)">🖥 Depuis le serveur</button>
+        <button class="restore-tab" id="restore-tab-server" onclick="switchRestoreTab('server',this)">🖥 Depuis le serveur</button>
       </div>
 
       <!-- TAB: fichier local -->
@@ -2971,7 +2971,8 @@ function renderSnoozed() {
 // ═══════════════════════════════════════════════
 //  SAUVEGARDE — Fichier local + Email
 // ═══════════════════════════════════════════════
-const SAVE_TRACK_KEY = 'taskflow_last_save';
+const SAVE_TRACK_KEY   = 'taskflow_last_save';
+const IS_FILE_PROTOCOL = location.protocol === 'file:';
 
 function saveBackupFile(silent=false) {
   const data = {
@@ -2991,6 +2992,20 @@ function saveBackupFile(silent=false) {
 
 function saveToServer(type) {
   type = type || 'manual';
+
+  // Protocole file:// → PHP impossible, on passe directement au Gist ou téléchargement
+  if (IS_FILE_PROTOCOL) {
+    if (type !== 'manual') return;
+    const token = localStorage.getItem(SYNC_TOKEN_KEY);
+    if (token) {
+      syncPush();
+    } else {
+      saveBackupFile(true);
+      toast('💾 Téléchargé — configurez ☁️ Sync pour sauvegarder dans le cloud', 'info');
+    }
+    return;
+  }
+
   const data = JSON.stringify({
     version: 3, exportedAt: new Date().toISOString(),
     tasks, todayTasks,
@@ -3018,9 +3033,7 @@ function saveToServer(type) {
   })
   .catch(() => {
     if (type === 'manual') {
-      // Si Gist configuré → sync cloud, sinon téléchargement
-      const token  = localStorage.getItem(SYNC_TOKEN_KEY);
-      const gistId = localStorage.getItem(SYNC_GIST_KEY);
+      const token = localStorage.getItem(SYNC_TOKEN_KEY);
       if (token) {
         syncPush();
       } else {
@@ -3349,6 +3362,9 @@ function openRestoreModal() {
   document.getElementById('restore-preview').classList.remove('visible');
   document.getElementById('restore-stats').innerHTML = '';
   document.getElementById('restore-file-input').value = '';
+  // Masquer l'onglet "Serveur" si on est en file://
+  const serverTab = document.getElementById('restore-tab-server');
+  if (serverTab) serverTab.style.display = IS_FILE_PROTOCOL ? 'none' : '';
   switchRestoreTab('file', document.querySelector('.restore-tab'));
   document.getElementById('restore-modal').classList.add('open');
 }
@@ -3684,6 +3700,29 @@ function addFreeNoteToCalendar(noteId) {
 (function initSyncDot() {
   const last = localStorage.getItem(SYNC_LAST_KEY);
   if (last) setSyncDot('ok');
+})();
+
+// Bannière mode file://
+(function initFileModeBanner() {
+  if (!IS_FILE_PROTOCOL) return;
+  const token = localStorage.getItem(SYNC_TOKEN_KEY);
+  if (token) return; // Gist configuré → pas de bannière
+  const b = document.createElement('div');
+  b.id = 'file-mode-banner';
+  b.style.cssText = `position:fixed;top:54px;left:0;right:0;z-index:150;
+    background:rgba(88,166,255,.1);border-bottom:1px solid rgba(88,166,255,.25);
+    padding:7px 18px;display:flex;align-items:center;gap:10px;font-size:.78rem;`;
+  b.innerHTML = `
+    <span style="color:var(--accent)">ℹ️</span>
+    <span style="flex:1;color:var(--text2)">Mode fichier local — <strong style="color:var(--accent)">💾 Sauvegarder</strong>
+    télécharge un JSON. Configurez <strong style="color:var(--accent)">☁️ Sync</strong> pour sauvegarder dans le cloud.</span>
+    <button onclick="openSyncModal()" style="background:rgba(88,166,255,.15);border:1px solid rgba(88,166,255,.4);
+      color:var(--accent);border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.75rem;font-weight:700;">
+      Configurer Sync
+    </button>
+    <button onclick="this.closest('#file-mode-banner').remove()"
+      style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;">✕</button>`;
+  document.body.appendChild(b);
 })();
 
 // ═══════════════════════════════════════════════
