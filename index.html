@@ -1150,6 +1150,28 @@
   }
   .free-note-del:hover { color: var(--q1-color); background: rgba(248,81,73,.1); }
 
+  /* Sous-notes des notes libres */
+  .fn-subnotes { display:flex; flex-direction:column; gap:4px; margin:4px 0 2px; }
+  .fn-sn-item { display:flex; align-items:center; gap:7px; padding:4px 8px;
+    background:var(--bg3); border-radius:6px; font-size:.78rem; color:var(--text2); }
+  .fn-sn-item.fn-sn-done .fn-sn-text { text-decoration:line-through; color:var(--text3); }
+  .fn-sn-check { width:14px; height:14px; border:1.5px solid var(--border); border-radius:3px;
+    flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    font-size:.6rem; transition:var(--trans); }
+  .fn-sn-check:hover { border-color:var(--q2-color); }
+  .fn-sn-item.fn-sn-done .fn-sn-check { background:var(--q2-color); border-color:var(--q2-color); color:#000; }
+  .fn-sn-text { flex:1; }
+  .fn-sn-del { background:none; border:none; color:transparent; cursor:pointer;
+    font-size:.65rem; padding:0 2px; transition:var(--trans); }
+  .fn-sn-item:hover .fn-sn-del { color:var(--text3); }
+  .fn-sn-del:hover { color:var(--q1-color) !important; }
+  .fn-add-sn-form { display:none; align-items:center; gap:6px; margin-top:2px; }
+  .fn-add-sn-form.open { display:flex; }
+  .fn-add-sn-input { flex:1; background:var(--bg3); border:1px solid var(--border);
+    border-radius:6px; color:var(--text); padding:5px 9px; font-size:.78rem;
+    outline:none; font-family:inherit; }
+  .fn-add-sn-input:focus { border-color:var(--accent); }
+
   .qcp-dot {
     width: 24px; height: 24px; border-radius: 50%;
     cursor: pointer; border: 2px solid transparent;
@@ -4718,23 +4740,103 @@ function renderFreeNotes() {
   }
   if (empty) empty.style.display = 'none';
   freeNotes.forEach(n => {
+    if (!n.subnotes) n.subnotes = [];
     const card = document.createElement('div');
     card.className = 'free-note-card';
+    const snHtml = n.subnotes.map((sn, i) => `
+      <div class="fn-sn-item${sn.done?' fn-sn-done':''}" id="fn-sni-${n.id}-${i}">
+        <div class="fn-sn-check" onclick="toggleFnSubnote('${n.id}',${i})">${sn.done?'✓':''}</div>
+        <span class="fn-sn-text">${escHtml(sn.text)}</span>
+        <button class="fn-sn-del" onclick="deleteFnSubnote('${n.id}',${i})">✕</button>
+      </div>`).join('');
+    const snCount = n.subnotes.length ? `<span style="font-size:.68rem;color:var(--text3);margin-left:4px">(${n.subnotes.filter(s=>s.done).length}/${n.subnotes.length})</span>` : '';
     card.innerHTML = `
       <input  class="free-note-title" placeholder="Titre…" value="${escHtml(n.title)}"
               oninput="updateFreeNote('${n.id}','title',this.value)" />
       <textarea class="free-note-body" placeholder="Écrivez votre note ici…"
                 oninput="updateFreeNote('${n.id}','body',this.value)">${escHtml(n.body)}</textarea>
+      <div class="fn-subnotes" id="fn-snl-${n.id}">${snHtml}</div>
+      <div class="fn-add-sn-form" id="fn-snf-${n.id}">
+        <input class="fn-add-sn-input" id="fn-sni-${n.id}" placeholder="Ajouter une sous-note…" />
+        <button class="subnote-ok" onclick="saveFnSubnote('${n.id}')">＋ OK</button>
+        <button class="subnote-cancel" onclick="closeFnSubnoteForm('${n.id}')">✕</button>
+      </div>
       <div class="free-note-footer">
-        <span>${new Date(n.updatedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span>${new Date(n.updatedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+          ${snCount}
+        </div>
         <div style="display:flex;gap:6px;">
+          <button class="free-note-del" onclick="openFnSubnoteForm('${n.id}')" style="color:var(--accent)">＋ Sous-note</button>
           <button class="free-note-del" onclick="copyFreeNoteTitle('${n.id}')">📋 Copier</button>
           <button class="free-note-del" onclick="addFreeNoteToCalendar('${n.id}')" style="color:var(--q2-color)">📅 Agenda</button>
           <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
         </div>
       </div>`;
+    // Keyboard
+    card.querySelector(`#fn-sni-${n.id}`)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); saveFnSubnote(n.id); }
+      if (e.key === 'Escape') { e.preventDefault(); closeFnSubnoteForm(n.id); }
+    });
     grid.appendChild(card);
   });
+}
+
+// ── Sous-notes des notes libres ──────────────────────────────────────────────
+function openFnSubnoteForm(nid) {
+  document.getElementById('fn-snf-' + nid)?.classList.add('open');
+  document.getElementById('fn-sni-' + nid)?.focus();
+}
+function closeFnSubnoteForm(nid) {
+  document.getElementById('fn-snf-' + nid)?.classList.remove('open');
+  const inp = document.getElementById('fn-sni-' + nid);
+  if (inp) inp.value = '';
+}
+function saveFnSubnote(nid) {
+  const inp = document.getElementById('fn-sni-' + nid);
+  const text = inp?.value?.trim();
+  if (!text) { inp?.focus(); return; }
+  const n = freeNotes.find(x => x.id === nid);
+  if (!n) return;
+  if (!n.subnotes) n.subnotes = [];
+  n.subnotes.push({ text, done: false, createdAt: Date.now() });
+  n.updatedAt = Date.now();
+  saveFreeNotes();
+  // Inject DOM without full re-render
+  const list = document.getElementById('fn-snl-' + nid);
+  if (list) {
+    const i = n.subnotes.length - 1;
+    const item = document.createElement('div');
+    item.className = 'fn-sn-item';
+    item.id = `fn-sni-${nid}-${i}`;
+    item.innerHTML = `
+      <div class="fn-sn-check" onclick="toggleFnSubnote('${nid}',${i})"></div>
+      <span class="fn-sn-text">${escHtml(text)}</span>
+      <button class="fn-sn-del" onclick="deleteFnSubnote('${nid}',${i})">✕</button>`;
+    list.appendChild(item);
+  }
+  inp.value = '';
+  inp.focus();
+}
+function toggleFnSubnote(nid, idx) {
+  const n = freeNotes.find(x => x.id === nid);
+  if (!n?.subnotes?.[idx]) return;
+  n.subnotes[idx].done = !n.subnotes[idx].done;
+  n.updatedAt = Date.now();
+  saveFreeNotes();
+  const item = document.getElementById(`fn-sni-${nid}-${idx}`);
+  if (item) {
+    item.classList.toggle('fn-sn-done', n.subnotes[idx].done);
+    item.querySelector('.fn-sn-check').textContent = n.subnotes[idx].done ? '✓' : '';
+  }
+}
+function deleteFnSubnote(nid, idx) {
+  const n = freeNotes.find(x => x.id === nid);
+  if (!n?.subnotes) return;
+  n.subnotes.splice(idx, 1);
+  n.updatedAt = Date.now();
+  saveFreeNotes();
+  renderFreeNotes();
 }
 
 // Init on load
