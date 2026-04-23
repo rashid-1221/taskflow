@@ -2096,7 +2096,7 @@ function makeCard(t) {
       <button class="task-btn move-btn" onclick="moveTaskInQuad('${t.id}',-1,event)" title="Monter">▲</button>
       <button class="task-btn move-btn" onclick="moveTaskInQuad('${t.id}',+1,event)" title="Descendre">▼</button>
       <button class="task-btn move-btn move-edge" onclick="moveTaskToBottom('${t.id}',event)" title="Fin de la matrice">⤓</button>
-      <button class="task-btn" onclick="openSubnoteForm('${t.id}',event)">📝 Sous-note</button>
+      <button class="task-btn ti-comment-btn" onclick="openSubnoteForm('${t.id}',event)">📝 Sous-note</button>
       <button class="task-btn" onclick="openEdit('${t.id}',event)">✏️ Éditer</button>
       <button class="task-btn" onclick="openMove('${t.id}',event)">↗ Déplacer</button>
       <button class="task-btn today-btn-card" onclick="sendToToday('${t.id}',event)">${alreadyToday?'☀️✓':'☀️ Aujourd\'hui'}</button>
@@ -2105,7 +2105,7 @@ function makeCard(t) {
       <button class="task-btn" onclick="copyTaskTitle('${t.id}',event)" title="Copier le titre">📋 Copier</button>
       <button class="task-btn ${t.planned?'planned-active':''}" onclick="togglePlanned('${t.id}',event)" title="${t.planned?'Retirer planifiée':'Marquer comme planifiée'}" style="color:${t.planned?'var(--q2-color)':'var(--text3)'}">📌${t.planned?' Planifiée':''}</button>
       <button class="task-btn" onclick="addToCalendar('${t.id}')" title="Ajouter à Google Agenda" style="color:var(--q2-color)">📅 Agenda</button>
-      <button class="task-btn" onclick="archiveTask('${t.id}',event)" style="color:var(--text3)" title="Archiver cette note">🗃 Archiver</button>
+      <button class="task-btn" onclick="archiveTask('${t.id}',event)" style="color:var(--text3);margin-left:auto" title="Archiver cette note">🗃 Archiver</button>
       <button class="task-btn danger" onclick="deleteTask('${t.id}',event)" title="Supprimer (récupérable 7j)">🗑</button>
     </div>`;
 
@@ -4638,6 +4638,14 @@ function showContextMenu(e, taskId, quadId) {
   menu.querySelector('#ctx-today').textContent = `☀️ Envoyer dans Aujourd'hui ${lbl}`;
   menu.querySelector('#ctx-move').firstChild.textContent = `↗ Déplacer vers… ${lbl}`;
 
+  // Populate custom quads in "Déplacer vers" submenu
+  const cqList = menu.querySelector('#ctx-custom-quads-list');
+  if (cqList) {
+    cqList.innerHTML = customQuads.map(cq =>
+      `<div class="ctx-item" onclick="ctxAction('move','${cq.id}')" style="color:${cq.color}">${cq.label}</div>`
+    ).join('');
+  }
+
   // Select-all-quad item
   const sqItem = menu.querySelector('#ctx-select-all-quad');
   const sqSep  = menu.querySelector('#ctx-sep-select');
@@ -4687,11 +4695,13 @@ function ctxAction(action, param) {
     toast(`☀️ ${ids.length > 1 ? ids.length+' notes envoyées' : 'Envoyée'} dans Aujourd'hui`, 'gold');
   }
   else if (action === 'move') {
-    pushHistory(`Déplacement → ${QUADS[param].label.split('—')[0]}`);
+    const qInfo = getQuadInfo(param);
+    const qLabel = qInfo ? qInfo.label.split('—')[0].trim() : param;
+    pushHistory(`Déplacement → ${qLabel}`);
     ids.forEach(id => { const t=tasks.find(x=>x.id===id); if(t) t.quad=param; });
     matrixSelected.clear();
     save(); renderAll(); updateMatrixBulkBar();
-    toast(`Déplacée${ids.length>1?'s':''} → ${QUADS[param].label.split('—')[0]} ✓`, 'success');
+    toast(`Déplacée${ids.length>1?'s':''} → ${qLabel} ✓`, 'success');
   }
   else if (action === 'done') {
     pushHistory(`Terminée/rouverte`);
@@ -4948,6 +4958,16 @@ document.addEventListener('DOMContentLoaded', () => {
 //  CUSTOM QUADRANTS
 // ═══════════════════════════════════════════════
 let customQuads = JSON.parse(localStorage.getItem('taskflow_custom_quads') || '[]');
+
+// Inject built-in "Amélioration" quad if not already present
+(function() {
+  const BUILTIN_ID = 'builtin-amelioration';
+  if (!customQuads.find(q => q.id === BUILTIN_ID)) {
+    customQuads.push({ id: BUILTIN_ID, label: '🔧 Amélioration', color: '#0ea5e9' });
+    localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
+  }
+})();
+
 let selectedQuadColor = '#9c59d1';
 
 function saveCustomQuads() {
@@ -4992,12 +5012,18 @@ function renderCustomQuads() {
     const shown = tasks.filter(t => t.quad === cq.id && t.status !== 'archived' && t.status !== 'deleted' && !t.inToday);
     const div = document.createElement('div');
     div.className = 'quadrant';
+    div.id = 'quad-' + cq.id;
+    div.dataset.size = quadSizes[cq.id] ?? 3;
+    if (quadCollapsed[cq.id]) div.classList.add('q-collapsed');
     div.style.cssText = `flex:1;min-width:260px;border-top:3px solid ${cq.color};`;
     div.innerHTML = `
       <div class="q-header">
         <div class="q-title" style="color:${cq.color}">${cq.label}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+        <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
           <span class="q-cnt" style="background:${cq.color}22;color:${cq.color}">${shown.length}</span>
+          <button class="q-ctrl-btn" onclick="resizeCQ('${cq.id}',-1)" title="Réduire la hauteur">−</button>
+          <button class="q-ctrl-btn" onclick="resizeCQ('${cq.id}',+1)" title="Augmenter la hauteur">＋</button>
+          <button class="q-ctrl-btn q-collapse-btn" id="qcollapse-${cq.id}" onclick="collapseCQ('${cq.id}')" title="Réduire / Agrandir">${quadCollapsed[cq.id]?'⊞':'⊟'}</button>
           <button class="q-ctrl-btn q-add-btn" onclick="openQuadAdd('${cq.id}')" style="color:${cq.color}">＋</button>
           <button class="q-ctrl-btn" onclick="deleteCustomQuad('${cq.id}')" style="color:var(--text3);font-size:.7rem;" title="Supprimer la matrice">✕</button>
         </div>
@@ -5031,6 +5057,25 @@ function renderCustomQuads() {
       if (e.key === 'Escape') { e.preventDefault(); closeQuadAdd(cq.id); }
     });
   });
+}
+
+function resizeCQ(id, dir) {
+  const cur = quadSizes[id] ?? 3;
+  const next = Math.max(1, Math.min(5, cur + dir));
+  if (next === cur) return;
+  quadSizes[id] = next;
+  localStorage.setItem(QUAD_SIZE_KEY, JSON.stringify(quadSizes));
+  const el = document.getElementById('quad-' + id);
+  if (el) el.dataset.size = next;
+}
+
+function collapseCQ(id) {
+  quadCollapsed[id] = !(quadCollapsed[id] ?? false);
+  localStorage.setItem(QUAD_COLLAPSE_KEY, JSON.stringify(quadCollapsed));
+  const el  = document.getElementById('quad-' + id);
+  const btn = document.getElementById('qcollapse-' + id);
+  if (el)  el.classList.toggle('q-collapsed', quadCollapsed[id]);
+  if (btn) btn.textContent = quadCollapsed[id] ? '⊞' : '⊟';
 }
 
 function getQuadInfo(quadId) {
@@ -5084,11 +5129,13 @@ function getQuadInfo(quadId) {
   <div class="ctx-item ctx-submenu" id="ctx-move">
     ↗ Déplacer vers…
     <span style="margin-left:auto;font-size:.7rem;color:var(--text3)">▶</span>
-    <div class="ctx-submenu-panel">
+    <div class="ctx-submenu-panel" id="ctx-move-panel">
       <div class="ctx-item" onclick="ctxAction('move','q1')" style="color:var(--q1-color)">⚡ Q1 — Urgent &amp; Important</div>
       <div class="ctx-item" onclick="ctxAction('move','q2')" style="color:var(--q2-color)">📅 Q2 — Important &amp; Non Urgent</div>
       <div class="ctx-item" onclick="ctxAction('move','q3')" style="color:var(--q3-color)">🤝 Q3 — Urgent &amp; Non Important</div>
       <div class="ctx-item" onclick="ctxAction('move','q4')" style="color:var(--q4-color)">🗑 Q4 — Non Urgent &amp; Non Important</div>
+      <div class="ctx-separator"></div>
+      <div id="ctx-custom-quads-list"></div>
     </div>
   </div>
   <div class="ctx-separator"></div>
