@@ -2373,8 +2373,9 @@ function makeTodayItem(t) {
   wrap.dataset.tid = t.id;
 
   const oq = t.originQuad;
-  const originBadge = oq
-    ? `<span class="ti-origin-badge ti-origin-${oq}">${QUADS[oq].icon} ${QUADS[oq].label}</span>`
+  const oqInfo = oq ? (QUADS[oq] || getQuadInfo(oq)) : null;
+  const originBadge = oqInfo
+    ? `<span class="ti-origin-badge ti-origin-${oq}">${oqInfo.icon||'📁'} ${oqInfo.label}</span>`
     : `<span class="ti-origin-badge ti-origin-direct">✏️ Saisie</span>`;
 
   const lastNote = t.notes?.length ? t.notes[t.notes.length-1] : null;
@@ -2720,10 +2721,12 @@ function reclassifyToday(id, quad) {
   }
   todayTasks = todayTasks.filter(x=>x.id!==id);
   save(); saveToday();
-  const qLabel = (QUADS[quad]?.label || (customQuads.find(q=>q.id===quad)?.label) || quad).split('—')[0].trim();
+  const qLabel = (getQuadInfo(quad)?.label || quad).split('—')[0].trim();
   toast(`Classée dans "${qLabel}" ✓`, 'success');
-  // Defer render to after the onchange event finishes (avoids DOM rebuild mid-event)
-  requestAnimationFrame(() => { renderAll(); renderToday(); });
+  // renderToday d'abord pour que la note disparaisse immédiatement,
+  // puis renderAll pour mettre à jour la matrice
+  renderToday();
+  requestAnimationFrame(() => { renderAll(); });
 }
 
 function toggleTiCommentForm(id) {
