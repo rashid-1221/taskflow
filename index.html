@@ -3743,7 +3743,12 @@ function addFreeNoteToCalendar(noteId) {
 function emailNote(title, body) {
   const subject = encodeURIComponent(title || '');
   const bodyEnc = encodeURIComponent(body  || '');
-  window.location.href = `mailto:?subject=${subject}&body=${bodyEnc}`;
+  const a = document.createElement('a');
+  a.href = `mailto:?subject=${subject}&body=${bodyEnc}`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 200);
   toast('📧 Messagerie ouverte', 'success');
 }
 function emailTask(id)     { const t=tasks.find(x=>x.id===id);      if(t) emailNote(t.title, t.desc||''); }
