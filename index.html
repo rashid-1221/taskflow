@@ -2105,6 +2105,7 @@ function makeCard(t) {
       <button class="task-btn" onclick="copyTaskTitle('${t.id}',event)" title="Copier le titre">📋 Copier</button>
       <button class="task-btn ${t.planned?'planned-active':''}" onclick="togglePlanned('${t.id}',event)" title="${t.planned?'Retirer planifiée':'Marquer comme planifiée'}" style="color:${t.planned?'var(--q2-color)':'var(--text3)'}">📌${t.planned?' Planifiée':''}</button>
       <button class="task-btn" onclick="addToCalendar('${t.id}')" title="Ajouter à Google Agenda" style="color:var(--q2-color)">📅 Agenda</button>
+      <button class="task-btn" onclick="emailTask('${t.id}')" title="Envoyer par email">📧 Email</button>
       <button class="task-btn" onclick="archiveTask('${t.id}',event)" style="color:var(--text3);margin-left:auto" title="Archiver cette note">🗃 Archiver</button>
       <button class="task-btn danger" onclick="deleteTask('${t.id}',event)" title="Supprimer (récupérable 7j)">🗑</button>
     </div>`;
@@ -2437,6 +2438,7 @@ function makeTodayItem(t) {
       <button class="ti-comment-btn" onclick="openEditFromToday('${t.id}',event)">✏️ Éditer</button>
       <button class="ti-comment-btn" onclick="copyTodayTitle('${t.id}')">📋 Copier</button>
       <button class="ti-comment-btn" onclick="addTodayToCalendar('${t.id}')" style="color:var(--q2-color)" title="Ajouter à Google Agenda">📅 Agenda</button>
+      <button class="ti-comment-btn" onclick="emailTodayTask('${t.id}')" title="Envoyer par email">📧 Email</button>
       <button class="ti-del-btn" style="color:var(--text3)" onclick="archiveTodayTask('${t.id}')">🗃 Archiver</button>
       <button class="ti-del-btn" onclick="deleteTodayTask('${t.id}')">🗑 Supprimer</button>
     </div>`;
@@ -3039,27 +3041,20 @@ function saveBackupFile(silent=false) {
 }
 
 function saveToServer(type) {
-  type = type || 'manual';
-
-  // Protocole file:// → PHP impossible, on passe directement au Gist ou téléchargement
-  if (IS_FILE_PROTOCOL) {
-    if (type !== 'manual') return;
-    const token = localStorage.getItem(SYNC_TOKEN_KEY);
-    if (token) {
-      syncPush();
-    } else {
-      saveBackupFile(true);
-      toast('💾 Téléchargé — configurez ☁️ Sync pour sauvegarder dans le cloud', 'info');
-    }
-    return;
-  }
+  type = type || 'daily';
 
   const data = JSON.stringify({
     version: 3, exportedAt: new Date().toISOString(),
     tasks, todayTasks,
     layout: { quadOrder, quadSizes, quadCollapsed, snoozeSpanState }
   }, null, 2);
-  fetch('api/save-backup.php', {
+
+  // En file://, utiliser l'URL absolue MAMP (Apache tourne en parallèle sur 8080)
+  const apiUrl = IS_FILE_PROTOCOL
+    ? 'http://localhost:8080/taskflow/api/save-backup.php'
+    : 'api/save-backup.php';
+
+  fetch(apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ data, type, filename: `taskflow-${new Date().toISOString().slice(0,10)}.json` })
@@ -3080,14 +3075,14 @@ function saveToServer(type) {
     }
   })
   .catch(() => {
-    if (type === 'manual') {
-      const token = localStorage.getItem(SYNC_TOKEN_KEY);
-      if (token) {
-        syncPush();
-      } else {
-        saveBackupFile(true);
-        toast('💾 Téléchargé — configurez ☁️ Sync pour sauvegarder dans le cloud', 'info');
-      }
+    // PHP inaccessible → fallback Gist ou téléchargement
+    const token = localStorage.getItem(SYNC_TOKEN_KEY);
+    if (token) {
+      syncPush();
+      toast('☁️ PHP indisponible — synchronisé via Gist', 'info');
+    } else {
+      saveBackupFile(true);
+      toast('💾 PHP indisponible — téléchargé localement', 'info');
     }
   });
 }
@@ -3743,6 +3738,17 @@ function addFreeNoteToCalendar(noteId) {
   if (!n) return;
   openGoogleCalendar(n.title || 'Note sans titre', n.body || '', '');
 }
+
+// ── Email depuis n'importe quelle note ──────────────────────────────────────
+function emailNote(title, body) {
+  const subject = encodeURIComponent(title || '');
+  const bodyEnc = encodeURIComponent(body  || '');
+  window.location.href = `mailto:?subject=${subject}&body=${bodyEnc}`;
+  toast('📧 Messagerie ouverte', 'success');
+}
+function emailTask(id)     { const t=tasks.find(x=>x.id===id);      if(t) emailNote(t.title, t.desc||''); }
+function emailTodayTask(id){ const t=todayTasks.find(x=>x.id===id); if(t) emailNote(t.title, ''); }
+function emailFreeNote(id) { const n=freeNotes.find(x=>x.id===id);  if(n) emailNote(n.title||n.body?.split('\n')[0]||'', n.body||''); }
 
 // Restore sync indicator on page load
 (function initSyncDot() {
@@ -4869,6 +4875,7 @@ function renderFreeNotes() {
           <button class="free-note-del" onclick="openFnSubnoteForm('${n.id}')" style="color:var(--accent)">＋ Sous-note</button>
           <button class="free-note-del" onclick="copyFreeNoteTitle('${n.id}')">📋 Copier</button>
           <button class="free-note-del" onclick="addFreeNoteToCalendar('${n.id}')" style="color:var(--q2-color)">📅 Agenda</button>
+          <button class="free-note-del" onclick="emailFreeNote('${n.id}')" title="Envoyer par email">📧 Email</button>
           <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
         </div>
       </div>`;
