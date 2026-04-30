@@ -2639,7 +2639,9 @@ function deleteTodayTask(id) {
     save();
   }
   todayTasks = todayTasks.filter(x=>x.id!==id);
-  saveToday(); renderAll();
+  saveToday();
+  renderToday();
+  requestAnimationFrame(() => renderAll());
   toastWithUndo('Retirée — récupérable 7j dans Archive', id);
 }
 
@@ -2664,7 +2666,9 @@ function archiveTodayTask(id) {
     save();
   }
   todayTasks = todayTasks.filter(x => x.id !== id);
-  saveToday(); renderAll();
+  saveToday();
+  renderToday();
+  requestAnimationFrame(() => renderAll());
   toast('Archivée 🗃', 'info');
 }
 
