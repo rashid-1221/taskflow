@@ -3734,8 +3734,20 @@ function togglePlanned(id, e) {
   if (!t) return;
   pushHistory(`${t.planned?'Déplanifiée':'Planifiée'} "${t.title}"`);
   t.planned = !t.planned;
-  save(); renderAll();
-  toast(t.planned ? '📌 Marquée comme planifiée' : 'Retirée des planifiées', 'info');
+  if (t.planned && t.quad !== 'q2') {
+    t._prevQuad = t.quad; // mémoriser le quadrant d'origine
+    t.quad = 'q2';
+    save(); renderAll();
+    toast('📌 Planifiée → déplacée en Q2 (Important & Non Urgent)', 'success');
+  } else if (!t.planned && t._prevQuad) {
+    t.quad = t._prevQuad;
+    delete t._prevQuad;
+    save(); renderAll();
+    toast('Retirée des planifiées → retour en ' + (QUADS[t.quad]?.label.split('—')[0]||t.quad), 'info');
+  } else {
+    save(); renderAll();
+    toast(t.planned ? '📌 Planifiée (déjà en Q2)' : 'Retirée des planifiées', 'info');
+  }
 }
 
 // ═══════════════════════════════════════════════
