@@ -1619,7 +1619,7 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Date limite</label>
+          <label class="form-label">📅 Date de planification</label>
           <input class="form-input" type="date" id="modal-due" />
         </div>
         <div class="form-group">
@@ -3883,13 +3883,14 @@ function saveTask() {
   if (!title) { toast('Titre obligatoire', 'error'); return; }
   const status = document.querySelector('.status-badge.selected')?.dataset.status||'pending';
   const commentTxt = document.getElementById('new-comment').value.trim();
+  const due = document.getElementById('modal-due').value;
   if (editingTaskId) {
     const t = tasks.find(x=>x.id===editingTaskId); if (!t) return;
     pushHistory(`Modification "${t.title}"`);
     const wasDone = t.status==='done';
     Object.assign(t, { title, desc:document.getElementById('modal-desc').value,
       quad:document.getElementById('modal-quad').value, tag:document.getElementById('modal-tag').value,
-      due:document.getElementById('modal-due').value, status });
+      due, status });
     if (commentTxt) t.comments.push({ text:commentTxt, date:Date.now() });
     if (status==='archived') { t.archivedAt=Date.now(); toast('Archivée','info'); }
     else if (status==='done'&&!wasDone) { confetti(); toast('Terminée ! 🎉','success'); }
@@ -3900,11 +3901,16 @@ function saveTask() {
     pushHistory(`Ajout "${title}"`);
     tasks.push({ id:uid(), title, desc:document.getElementById('modal-desc').value,
       quad:document.getElementById('modal-quad').value, tag:document.getElementById('modal-tag').value,
-      due:document.getElementById('modal-due').value, status,
+      due, status,
       comments: commentTxt?[{text:commentTxt,date:Date.now()}]:[], createdAt:Date.now() });
     toast('Tâche créée ✓','success');
   }
+  const desc = document.getElementById('modal-desc')?.value || '';
   save(); closeModal(); renderAll();
+  // Ouvrir Google Agenda automatiquement si une date de planification est renseignée
+  if (due) {
+    setTimeout(() => openGoogleCalendar(title, desc, due), 300);
+  }
 }
 function closeModal() {
   document.getElementById('task-modal').classList.remove('open');
