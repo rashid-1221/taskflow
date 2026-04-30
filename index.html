@@ -1850,6 +1850,7 @@ function loadToday() {
 function saveToday() { localStorage.setItem(TODAY_KEY, JSON.stringify(todayTasks)); }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function cap(s) { if (!s) return s; return s.charAt(0).toUpperCase() + s.slice(1); }
 
 // ═══════════════════════════════════════════════
 //  UNDO GLOBAL (10 niveaux)
@@ -2552,7 +2553,7 @@ function renderPicker() {
 // ═══════════════════════════════════════════════
 function addTodayTask() {
   const inp = document.getElementById('today-input');
-  const title = inp.value.trim();
+  const title = cap(inp.value.trim());
   if (!title) { toast('Entrez un titre', 'error'); return; }
   pushHistory(`Ajout aujourd'hui "${title}"`);
   todayTasks.push({ id:uid(), title, done:false, originQuad:null, originTaskId:null, notes:[], createdAt:Date.now() });
@@ -2780,7 +2781,7 @@ function saveTodayInlineEdit(todayId, e) {
   const ti = todayTasks.find(x => x.id === todayId);
   if (!ti) return;
   const inp      = document.getElementById('ti-ei-' + todayId);
-  const newTitle = inp?.value.trim();
+  const newTitle = cap(inp?.value.trim());
   if (!newTitle) { toast('Titre obligatoire', 'error'); return; }
   pushHistory(`Modification titre "${ti.title}"`);
   ti.title = newTitle;
@@ -3800,7 +3801,7 @@ function emailFreeNote(id) { const n=freeNotes.find(x=>x.id===id);  if(n) emailN
 //  MATRIX ACTIONS
 // ═══════════════════════════════════════════════
 function quickAdd() {
-  const title = document.getElementById('quick-title').value.trim();
+  const title = cap(document.getElementById('quick-title').value.trim());
   if (!title) { toast('Entrez un titre', 'error'); return; }
   pushHistory(`Ajout "${title}"`);
   tasks.push({ id:uid(), title, desc:'', quad:document.getElementById('quick-quad').value,
@@ -3866,7 +3867,7 @@ function selectStatus(btn) {
   btn.classList.add('selected');
 }
 function saveTask() {
-  const title = document.getElementById('modal-title').value.trim();
+  const title = cap(document.getElementById('modal-title').value.trim());
   if (!title) { toast('Titre obligatoire', 'error'); return; }
   const status = document.querySelector('.status-badge.selected')?.dataset.status||'pending';
   const commentTxt = document.getElementById('new-comment').value.trim();
@@ -4496,7 +4497,7 @@ function closeQuadAdd(q) {
 function submitQuadAdd(q) {
   const inp = document.getElementById('qadd-input-'+q) || document.getElementById('qi-'+q);
   if (!inp) return;
-  const title = inp.value.trim();
+  const title = cap(inp.value.trim());
   if (!title) { inp.focus(); return; }
   const qInfo = QUADS[q] || customQuads.find(x => x.id === q);
   const qLabel = qInfo ? (qInfo.label.split('—')[0] || qInfo.label) : q;
@@ -4869,7 +4870,7 @@ function deleteFreeNote(id) {
 function updateFreeNote(id, field, value) {
   const n = freeNotes.find(x => x.id === id);
   if (!n) return;
-  n[field] = value;
+  n[field] = field === 'title' ? cap(value) : value;
   n.updatedAt = Date.now();
   saveFreeNotes();
 }
