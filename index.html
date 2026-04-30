@@ -3102,6 +3102,36 @@ function checkDailyAutoBackup() {
 // Vérification toutes les 5 minutes
 setInterval(checkDailyAutoBackup, 5 * 60 * 1000);
 
+// ── Notes du matin (8h30) ───────────────────────────────────────────────────
+const MORNING_NOTES_KEY = 'taskflow_morning_notes_date';
+const MORNING_NOTES = ['☑ Check agenda', '📬 Check emails'];
+
+function checkMorningNotes() {
+  const now   = new Date();
+  const h     = now.getHours();
+  const m     = now.getMinutes();
+  const today = now.toISOString().slice(0,10);
+  const last  = localStorage.getItem(MORNING_NOTES_KEY) || '';
+  if (last === today) return;            // déjà ajoutées aujourd'hui
+  if (h < 8 || (h === 8 && m < 30)) return; // pas encore 8h30
+
+  MORNING_NOTES.forEach(title => {
+    // Eviter les doublons si la page est rechargée après ajout
+    if (todayTasks.some(t => t.title === title)) return;
+    todayTasks.unshift({
+      id: uid(), title, done: false,
+      originQuad: null, originTaskId: null,
+      notes: [], subnotes: [], createdAt: Date.now(), addedAt: Date.now()
+    });
+  });
+
+  localStorage.setItem(MORNING_NOTES_KEY, today);
+  saveToday();
+  if (currentView === 'today') renderToday();
+  toast('☀️ Rappels du matin ajoutés dans Aujourd\'hui', 'gold');
+}
+setInterval(checkMorningNotes, 60 * 1000); // vérifie chaque minute
+
 // ── Sauvegarder layout + données avant fermeture ────────────────────────────
 window.addEventListener('beforeunload', function() {
   try {
@@ -4796,6 +4826,7 @@ applyQuadOrder();
 applyQuadSizes();
 checkAutoSave();
 checkDailyAutoBackup();
+checkMorningNotes();
 updateLoginHeader();
 updateFreeNotesBadge();
 setTimeout(checkStaleDoneTasks, 600);
