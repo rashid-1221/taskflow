@@ -2784,6 +2784,7 @@ function saveTodayInlineEdit(todayId, e) {
   if (!newTitle) { toast('Titre obligatoire', 'error'); return; }
   pushHistory(`Modification titre "${ti.title}"`);
   ti.title = newTitle;
+  closeTodayInlineEdit(todayId);
   saveToday(); renderToday();
   toast('Titre modifié ✓', 'success');
 }
@@ -3890,7 +3891,7 @@ function saveTask() {
       comments: commentTxt?[{text:commentTxt,date:Date.now()}]:[], createdAt:Date.now() });
     toast('Tâche créée ✓','success');
   }
-  save(); renderAll(); closeModal();
+  save(); closeModal(); renderAll();
 }
 function closeModal() {
   document.getElementById('task-modal').classList.remove('open');
