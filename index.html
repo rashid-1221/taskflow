@@ -5236,5 +5236,54 @@ function getQuadInfo(quadId) {
     </div>
   </div>
 </div>
+<!-- ═══════════ BOUTON COMMENTAIRE AMÉLIORATION ═══════════ -->
+<button id="comment-fab" onclick="toggleCommentPanel()" title="Ajouter une idée d'amélioration"
+  style="position:fixed;bottom:90px;right:22px;z-index:400;
+    width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#0ea5e9,#0284c7);
+    color:#fff;font-size:1.3rem;box-shadow:0 4px 14px rgba(14,165,233,.45);
+    display:flex;align-items:center;justify-content:center;transition:transform .15s;">💬</button>
+
+<div id="comment-panel"
+  style="display:none;position:fixed;bottom:145px;right:22px;z-index:401;
+    width:min(320px,92vw);background:var(--bg2);border:1px solid var(--border);
+    border-radius:14px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.35);
+    flex-direction:column;gap:10px;">
+  <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:2px;">💬 Idée d'amélioration</div>
+  <input id="comment-input" class="sync-input" placeholder="Décrivez votre idée…"
+    onkeydown="if(event.key==='Enter')saveCommentIdea();if(event.key==='Escape')toggleCommentPanel()" />
+  <textarea id="comment-body" class="sync-input" placeholder="Détails (optionnel)…"
+    rows="3" style="resize:vertical;font-family:inherit;font-size:.82rem;line-height:1.5;"></textarea>
+  <div style="display:flex;gap:8px;">
+    <button class="sync-btn primary" onclick="saveCommentIdea()" style="flex:1">＋ Ajouter</button>
+    <button class="sync-btn" onclick="toggleCommentPanel()">Annuler</button>
+  </div>
+</div>
+
+<script>
+function toggleCommentPanel() {
+  const panel = document.getElementById('comment-panel');
+  const fab   = document.getElementById('comment-fab');
+  const open  = panel.style.display === 'flex';
+  panel.style.display = open ? 'none' : 'flex';
+  fab.style.transform  = open ? '' : 'rotate(20deg)';
+  if (!open) { setTimeout(() => document.getElementById('comment-input')?.focus(), 60); }
+}
+function saveCommentIdea() {
+  const title = cap(document.getElementById('comment-input').value.trim());
+  if (!title) { document.getElementById('comment-input').focus(); return; }
+  const desc  = document.getElementById('comment-body').value.trim();
+  const quadId = 'builtin-amelioration';
+  manualSortQuads.add(quadId);
+  localStorage.setItem('taskflow_manualsort', JSON.stringify([...manualSortQuads]));
+  tasks.push({ id:uid(), title, desc, quad:quadId, tag:'', due:'', status:'pending',
+    comments:[], subnotes:[], createdAt:Date.now() });
+  save(); renderAll();
+  document.getElementById('comment-input').value  = '';
+  document.getElementById('comment-body').value   = '';
+  toggleCommentPanel();
+  toast('💬 Idée ajoutée dans Amélioration ✓', 'success');
+}
+</script>
 </body>
 </html>
