@@ -4875,8 +4875,15 @@ function addFreeNote() {
   freeNotes.unshift(note);
   saveFreeNotes();
   if (currentView !== 'notes') switchView('notes');
-  renderFreeNotes();
-  setTimeout(() => document.querySelector('#free-notes-grid .free-note-title')?.focus(), 80);
+  else renderFreeNotes();
+  // Focus le champ titre de la nouvelle note (par son ID unique)
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const card = document.getElementById('fn-card-' + note.id);
+      const inp  = card?.querySelector('.free-note-title');
+      if (inp) { inp.scrollIntoView({ behavior:'smooth', block:'center' }); inp.focus(); }
+    }, 150);
+  });
 }
 
 function deleteFreeNote(id) {
@@ -4907,6 +4914,7 @@ function renderFreeNotes() {
     if (!n.subnotes) n.subnotes = [];
     const card = document.createElement('div');
     card.className = 'free-note-card';
+    card.id = 'fn-card-' + n.id;
     const snHtml = n.subnotes.map((sn, i) => `
       <div class="fn-sn-item${sn.done?' fn-sn-done':''}" id="fn-sni-${n.id}-${i}">
         <div class="fn-sn-check" onclick="toggleFnSubnote('${n.id}',${i})">${sn.done?'✓':''}</div>
