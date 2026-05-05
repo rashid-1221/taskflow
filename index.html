@@ -3035,6 +3035,7 @@ function saveBackupFile(silent=false) {
     exportedAt: new Date().toISOString(),
     tasks,
     todayTasks,
+    freeNotes,
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
@@ -3050,7 +3051,7 @@ function saveToServer(type) {
 
   const data = JSON.stringify({
     version: 3, exportedAt: new Date().toISOString(),
-    tasks, todayTasks,
+    tasks, todayTasks, freeNotes,
     layout: { quadOrder, quadSizes, quadCollapsed, snoozeSpanState }
   }, null, 2);
 
@@ -3543,8 +3544,9 @@ function previewBackup(data, filename) {
   const backupTasks = Array.isArray(data.tasks) ? data.tasks
     : Array.isArray(data) ? data : [];
   const backupToday = Array.isArray(data.todayTasks) ? data.todayTasks : [];
+  const backupFreeNotes = Array.isArray(data.freeNotes) ? data.freeNotes : [];
 
-  restoreData = { tasks: backupTasks, todayTasks: backupToday, meta: data };
+  restoreData = { tasks: backupTasks, todayTasks: backupToday, freeNotes: backupFreeNotes, meta: data };
 
   const date   = data.exportedAt ? new Date(data.exportedAt).toLocaleString('fr-FR') : 'inconnue';
   const total  = backupTasks.length;
@@ -3571,22 +3573,28 @@ function applyRestore(mode) {
 
   const { tasks: bTasks, todayTasks: bToday } = restoreData;
 
+  const { freeNotes: bFreeNotes = [] } = restoreData;
+
   if (mode === 'replace') {
     if (!confirm(`⚠️ Remplacer TOUTES vos données actuelles par cette sauvegarde (${bTasks.length} tâches) ?\n\nCette action est irréversible.`)) return;
     tasks      = bTasks;
     todayTasks = bToday;
-    save(); saveToday();
-    toast(`✅ Restauration complète — ${bTasks.length} tâches chargées`, 'success');
+    freeNotes  = bFreeNotes;
+    save(); saveToday(); saveFreeNotes();
+    toast(`✅ Restauration complète — ${bTasks.length} tâches, ${bFreeNotes.length} notes libres`, 'success');
   } else {
     // Merge: add tasks that don't already exist (by id)
     const existingIds = new Set(tasks.map(t=>t.id));
     const newTasks    = bTasks.filter(t=>!existingIds.has(t.id));
     const existingTIds = new Set(todayTasks.map(t=>t.id));
     const newToday    = bToday.filter(t=>!existingTIds.has(t.id));
+    const existingFNIds = new Set(freeNotes.map(n=>n.id));
+    const newFreeNotes  = bFreeNotes.filter(n=>!existingFNIds.has(n.id));
     tasks      = [...tasks, ...newTasks];
     todayTasks = [...todayTasks, ...newToday];
-    save(); saveToday();
-    toast(`✅ Fusion : ${newTasks.length} tâche(s) ajoutée(s), ${newToday.length} note(s) du jour`, 'success');
+    freeNotes  = [...freeNotes, ...newFreeNotes];
+    save(); saveToday(); saveFreeNotes();
+    toast(`✅ Fusion : ${newTasks.length} tâche(s), ${newFreeNotes.length} note(s) libre(s) ajoutée(s)`, 'success');
   }
 
   renderAll();
@@ -4858,7 +4866,10 @@ setTimeout(checkStaleDoneTasks, 600);
 // ═══════════════════════════════════════════════
 //  FREE NOTES
 // ═══════════════════════════════════════════════
-let freeNotes = JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]');
+let freeNotes = (() => {
+  try { return JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]'); }
+  catch(e) { localStorage.removeItem('taskflow_free_notes'); return []; }
+})();
 
 function saveFreeNotes() {
   localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
@@ -4911,6 +4922,7 @@ function renderFreeNotes() {
   }
   if (empty) empty.style.display = 'none';
   freeNotes.forEach(n => {
+    try {
     if (!n.subnotes) n.subnotes = [];
     const card = document.createElement('div');
     card.className = 'free-note-card';
@@ -4952,6 +4964,7 @@ function renderFreeNotes() {
       if (e.key === 'Escape') { e.preventDefault(); closeFnSubnoteForm(n.id); }
     });
     grid.appendChild(card);
+    } catch(err) { console.warn('Note corrompue ignorée:', n.id, err); }
   });
 }
 
