@@ -1834,6 +1834,12 @@ let snoozeSpanState = localStorage.getItem(SNOOZE_SPAN_KEY) || 'full';
 let manualSortQuads = new Set(JSON.parse(localStorage.getItem('taskflow_manualsort') || '[]'));
 let maximizedQuad = null;
 
+// Notes libres — déclaré ici pour éviter le Temporal Dead Zone (TDZ)
+let freeNotes = (() => {
+  try { return JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]'); }
+  catch(e) { localStorage.removeItem('taskflow_free_notes'); return []; }
+})();
+
 // ═══════════════════════════════════════════════
 //  PERSISTENCE
 // ═══════════════════════════════════════════════
@@ -4858,14 +4864,6 @@ applyQuadOrder();
 applyQuadSizes();
 checkAutoSave();
 checkDailyAutoBackup();
-// ═══════════════════════════════════════════════
-//  FREE NOTES  (init avant updateFreeNotesBadge)
-// ═══════════════════════════════════════════════
-let freeNotes = (() => {
-  try { return JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]'); }
-  catch(e) { localStorage.removeItem('taskflow_free_notes'); return []; }
-})();
-
 checkMorningNotes();
 updateLoginHeader();
 updateFreeNotesBadge();
@@ -4882,19 +4880,24 @@ function updateFreeNotesBadge() {
 }
 
 function addFreeNote() {
-  const note = { id: uid(), title: '', body: '', subnotes: [], createdAt: Date.now(), updatedAt: Date.now() };
-  freeNotes.unshift(note);
-  saveFreeNotes();
-  if (currentView !== 'notes') switchView('notes');
-  else renderFreeNotes();
-  // Focus le champ titre de la nouvelle note (par son ID unique)
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      const card = document.getElementById('fn-card-' + note.id);
-      const inp  = card?.querySelector('.free-note-title');
-      if (inp) { inp.scrollIntoView({ behavior:'smooth', block:'center' }); inp.focus(); }
-    }, 150);
-  });
+  try {
+    const note = { id: uid(), title: '', body: '', subnotes: [], createdAt: Date.now(), updatedAt: Date.now() };
+    freeNotes.unshift(note);
+    saveFreeNotes();
+    if (currentView !== 'notes') switchView('notes');
+    else renderFreeNotes();
+    toast('📓 Note ajoutée !', 'success');
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        const card = document.getElementById('fn-card-' + note.id);
+        const inp  = card?.querySelector('.free-note-title');
+        if (inp) { inp.scrollIntoView({ behavior:'smooth', block:'center' }); inp.focus(); }
+      }, 150);
+    });
+  } catch(e) {
+    console.error('addFreeNote error:', e);
+    toast('❌ Erreur note: ' + e.message, 'error');
+  }
 }
 
 function deleteFreeNote(id) {
