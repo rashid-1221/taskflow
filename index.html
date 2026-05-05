@@ -1143,10 +1143,18 @@
   .free-note-body {
     width: 100%; background: none; border: none;
     color: var(--text2); font-size: .85rem; line-height: 1.7;
-    resize: none; flex: 1; min-height: 100px;
-    outline: none; font-family: inherit; overflow: hidden;
+    resize: none; flex: 1; min-height: 100px; max-height: 220px;
+    outline: none; font-family: inherit;
+    overflow-y: auto; cursor: text;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
+  .free-note-body::-webkit-scrollbar { width: 5px; }
+  .free-note-body::-webkit-scrollbar-track { background: transparent; }
+  .free-note-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .free-note-body::-webkit-scrollbar-thumb:hover { background: var(--text3); }
   .free-note-body:focus { color: var(--text); }
+  .free-note-body:hover { scrollbar-color: var(--text3) transparent; }
   .free-note-footer {
     display: flex; align-items: center; justify-content: space-between;
     font-size: .68rem; color: var(--text3); margin-top: 4px;
@@ -4980,12 +4988,14 @@ function renderFreeNotes() {
           <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
         </div>
       </div>`;
-    // Auto-resize textarea
+    // Scroll fluide avec la molette dans la textarea
     const ta = card.querySelector('.free-note-body');
     if (ta) {
-      const resize = () => { ta.style.height = 'auto'; ta.style.height = Math.max(100, ta.scrollHeight) + 'px'; };
-      ta.addEventListener('input', resize);
-      requestAnimationFrame(resize);
+      ta.addEventListener('wheel', e => {
+        const atTop    = ta.scrollTop === 0 && e.deltaY < 0;
+        const atBottom = ta.scrollTop + ta.clientHeight >= ta.scrollHeight && e.deltaY > 0;
+        if (!atTop && !atBottom) e.stopPropagation();
+      }, { passive: true });
     }
     // Keyboard sous-note
     card.querySelector(`#fn-sni-${n.id}`)?.addEventListener('keydown', e => {
