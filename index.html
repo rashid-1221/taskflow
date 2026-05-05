@@ -1298,6 +1298,7 @@
     <button class="btn-icon" onclick="openArchive()">📦 Archive</button>
     <button class="btn-icon" onclick="shareByEmail()">📧 Email</button>
     <button class="btn-icon" onclick="saveToServer()">💾 Sauvegarder</button>
+    <button class="btn-icon" id="btn-firebase" onclick="openFirebaseModal()" title="Se connecter à Firebase" style="color:var(--text3);">🔥 Firebase</button>
     <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 GitHub</button>
     <button class="btn-icon" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
     <button class="btn-icon" onclick="clearDone()">🧹 Nettoyer</button>
@@ -5479,6 +5480,212 @@ function saveCommentIdea() {
   toggleCommentPanel();
   toast('💬 Idée ajoutée dans Amélioration ✓', 'success');
 }
+</script>
+<!-- ═══════════ FIREBASE SDK ═══════════ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- ═══════════ FIREBASE MODAL ═══════════ -->
+<div id="firebase-modal" style="display:none;position:fixed;inset:0;z-index:600;
+  background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+    padding:28px 32px;width:min(440px,94vw);display:flex;flex-direction:column;gap:16px;
+    box-shadow:0 24px 64px rgba(0,0,0,.5);">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="font-size:1.05rem;display:flex;align-items:center;gap:8px;">🔥 Firebase Sync</h3>
+      <button onclick="closeFirebaseModal()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1.2rem;">✕</button>
+    </div>
+
+    <!-- Formulaire connexion -->
+    <div id="fb-login-form">
+      <div style="font-size:.8rem;color:var(--text2);margin-bottom:12px;">Connectez-vous pour synchroniser vos données sur tous vos appareils.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <input id="fb-email" type="email" placeholder="Email" class="sync-input"
+          value="rashidkhouy@gmail.com" />
+        <input id="fb-password" type="password" placeholder="Mot de passe" class="sync-input"
+          onkeydown="if(event.key==='Enter')firebaseLogin()" />
+        <div id="fb-error" style="font-size:.78rem;color:var(--q1-color);display:none;"></div>
+        <button onclick="firebaseLogin()" class="sync-btn primary" style="margin-top:4px;">
+          🔑 Se connecter
+        </button>
+      </div>
+    </div>
+
+    <!-- Panneau connecté -->
+    <div id="fb-connected-panel" style="display:none;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;
+        background:rgba(63,185,80,.1);border:1px solid rgba(63,185,80,.3);border-radius:8px;">
+        <span style="color:var(--q2-color);font-size:1rem;">✅</span>
+        <div>
+          <div style="font-size:.82rem;font-weight:700;color:var(--q2-color);">Connecté</div>
+          <div id="fb-user-email" style="font-size:.72rem;color:var(--text3);"></div>
+        </div>
+      </div>
+
+      <div id="fb-last-sync" style="font-size:.72rem;color:var(--text3);text-align:center;"></div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button onclick="firebasePush()" class="sync-btn primary">
+          ⬆ Envoyer vers Firebase
+        </button>
+        <button onclick="firebasePull()" class="sync-btn">
+          ⬇ Recevoir depuis Firebase
+        </button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--border);">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.82rem;color:var(--text2);">
+          <input type="checkbox" id="fb-autosync" onchange="toggleFirebaseAutoSync(this.checked)"
+            style="accent-color:var(--accent);" />
+          Sync automatique à chaque sauvegarde
+        </label>
+      </div>
+
+      <button onclick="firebaseLogout()" class="sync-btn"
+        style="color:var(--q1-color);border-color:rgba(248,81,73,.3);">
+        🚪 Déconnexion
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  FIREBASE INIT
+// ═══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyCZ3rStUIxa2pjxQRQwxupBJjX_3iXdC-Q",
+  authDomain: "taskflow-47fa7.firebaseapp.com",
+  projectId: "taskflow-47fa7",
+  storageBucket: "taskflow-47fa7.firebasestorage.app",
+  messagingSenderId: "136559964435",
+  appId: "1:136559964435:web:0dd35643b47b92bae66ae6"
+};
+
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb   = firebase.firestore();
+let   fbAutoSync = localStorage.getItem('taskflow_fb_autosync') === '1';
+
+// Écouter le changement d'état de connexion
+fbAuth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('fb-login-form').style.display      = 'none';
+    document.getElementById('fb-connected-panel').style.display = 'flex';
+    document.getElementById('fb-user-email').textContent        = user.email;
+    document.getElementById('fb-autosync').checked              = fbAutoSync;
+    updateFbLastSync();
+  } else {
+    document.getElementById('fb-login-form').style.display      = 'block';
+    document.getElementById('fb-connected-panel').style.display = 'none';
+  }
+  updateFbHeaderBtn();
+});
+
+// ── Modal ──────────────────────────────────────
+function openFirebaseModal()  {
+  document.getElementById('firebase-modal').style.display = 'flex';
+}
+function closeFirebaseModal() {
+  document.getElementById('firebase-modal').style.display = 'none';
+}
+
+// ── Login / Logout ─────────────────────────────
+function firebaseLogin() {
+  const email = document.getElementById('fb-email').value.trim();
+  const pass  = document.getElementById('fb-password').value;
+  const errEl = document.getElementById('fb-error');
+  errEl.style.display = 'none';
+  fbAuth.signInWithEmailAndPassword(email, pass)
+    .then(() => { toast('🔥 Connecté à Firebase !', 'success'); })
+    .catch(e  => { errEl.textContent = '❌ ' + e.message; errEl.style.display = 'block'; });
+}
+
+function firebaseLogout() {
+  fbAuth.signOut().then(() => toast('Déconnecté de Firebase', 'info'));
+}
+
+// ── Push (envoyer vers Firebase) ───────────────
+async function firebasePush() {
+  const user = fbAuth.currentUser;
+  if (!user) { toast('❌ Connectez-vous d\'abord', 'error'); return; }
+  try {
+    toast('⬆ Envoi en cours…', 'info');
+    await fbDb.collection('users').doc(user.uid).set({
+      tasks,
+      todayTasks,
+      freeNotes,
+      layout: { quadOrder, quadSizes, quadCollapsed, snoozeSpanState },
+      updatedAt: new Date().toISOString()
+    });
+    const now = new Date().toLocaleString('fr-FR');
+    localStorage.setItem('taskflow_fb_lastsync', now);
+    updateFbLastSync();
+    toast('✅ Données envoyées sur Firebase !', 'success');
+  } catch(e) {
+    toast('❌ Erreur Firebase : ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+// ── Pull (recevoir depuis Firebase) ───────────
+async function firebasePull() {
+  const user = fbAuth.currentUser;
+  if (!user) { toast('❌ Connectez-vous d\'abord', 'error'); return; }
+  try {
+    toast('⬇ Récupération en cours…', 'info');
+    const doc = await fbDb.collection('users').doc(user.uid).get();
+    if (!doc.exists) { toast('ℹ️ Aucune donnée dans Firebase', 'info'); return; }
+    const data = doc.data();
+    if (Array.isArray(data.tasks))      { tasks      = data.tasks;      save(); }
+    if (Array.isArray(data.todayTasks)) { todayTasks = data.todayTasks; saveToday(); }
+    if (Array.isArray(data.freeNotes))  { freeNotes  = data.freeNotes;  saveFreeNotes(); }
+    const now = new Date().toLocaleString('fr-FR');
+    localStorage.setItem('taskflow_fb_lastsync', now);
+    updateFbLastSync();
+    renderAll();
+    if (currentView === 'notes') renderFreeNotes();
+    toast('✅ Données reçues depuis Firebase !', 'success');
+  } catch(e) {
+    toast('❌ Erreur Firebase : ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+// ── Auto-sync ──────────────────────────────────
+function toggleFirebaseAutoSync(on) {
+  fbAutoSync = on;
+  localStorage.setItem('taskflow_fb_autosync', on ? '1' : '0');
+  toast(on ? '🔄 Auto-sync Firebase activé' : 'Auto-sync désactivé', 'info');
+}
+
+// Appeler cette fonction dans save() pour auto-sync
+const _origSave = window.save || function(){};
+const _fbSaveHook = () => { if (fbAutoSync && fbAuth.currentUser) firebasePush(); };
+
+// ── Helpers ────────────────────────────────────
+function updateFbLastSync() {
+  const el = document.getElementById('fb-last-sync');
+  if (!el) return;
+  const t = localStorage.getItem('taskflow_fb_lastsync');
+  el.textContent = t ? '🕐 Dernier sync : ' + t : '';
+}
+
+function updateFbHeaderBtn() {
+  const btn = document.getElementById('btn-firebase');
+  if (!btn) return;
+  const connected = !!fbAuth.currentUser;
+  btn.style.color       = connected ? 'var(--q2-color)' : 'var(--text3)';
+  btn.style.borderColor = connected ? 'rgba(63,185,80,.35)' : '';
+  btn.title = connected ? 'Firebase connecté ✅' : 'Se connecter à Firebase';
+}
+
+// Fermer modal si clic hors
+document.getElementById('firebase-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('firebase-modal')) closeFirebaseModal();
+});
 </script>
 </body>
 </html>
