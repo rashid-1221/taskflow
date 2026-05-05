@@ -1155,6 +1155,41 @@
   .free-note-body::-webkit-scrollbar-thumb:hover { background: var(--text3); }
   .free-note-body:focus { color: var(--text); }
   .free-note-body:hover { scrollbar-color: var(--text3) transparent; }
+  .free-note-body:empty:before { content: attr(data-placeholder); color: var(--text3); pointer-events:none; }
+
+  /* ── Barre de formatage ── */
+  .fn-toolbar {
+    display: flex; align-items: center; gap: 2px; flex-wrap: wrap;
+    padding: 4px 6px; background: var(--bg3);
+    border: 1px solid var(--border); border-radius: 7px; margin-bottom: 2px;
+  }
+  .fn-tb-btn {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: .78rem; padding: 3px 7px;
+    border-radius: 5px; transition: var(--trans); line-height: 1;
+    font-family: inherit;
+  }
+  .fn-tb-btn:hover { background: var(--bg4); color: var(--text); }
+  .fn-tb-btn.active { background: var(--accent); color: #fff; }
+  .fn-tb-sep { width: 1px; height: 14px; background: var(--border); margin: 0 3px; }
+
+  /* ── Palette couleurs ── */
+  .fn-color-wrap { position: relative; display: inline-flex; }
+  .fn-color-picker {
+    display: none; position: absolute; top: 110%; left: 0; z-index: 300;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.35);
+    flex-wrap: wrap; gap: 5px; width: 136px;
+  }
+  .fn-color-picker.open { display: flex; }
+  .fn-cp-swatch {
+    width: 20px; height: 20px; border-radius: 4px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.1); transition: transform .1s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .65rem; color: var(--text3);
+  }
+  .fn-cp-swatch:hover { transform: scale(1.25); }
+
   .free-note-footer {
     display: flex; align-items: center; justify-content: space-between;
     font-size: .68rem; color: var(--text3); margin-top: 4px;
@@ -4964,11 +4999,44 @@ function renderFreeNotes() {
         <button class="fn-sn-del" onclick="deleteFnSubnote('${n.id}',${i})">✕</button>
       </div>`).join('');
     const snCount = n.subnotes.length ? `<span style="font-size:.68rem;color:var(--text3);margin-left:4px">(${n.subnotes.filter(s=>s.done).length}/${n.subnotes.length})</span>` : '';
+    const colors = ['#f85149','#ffa657','#e6b800','#3fb950','#58a6ff','#bc8cff','#ff7b72','#ffffff'];
+    const hlColors = ['#f8514950','#e6b80050','#3fb95050','#58a6ff50','#bc8cff50','#ffa65750'];
+    const mkSwatches = (id, type, list) => list.map(c =>
+      `<div class="fn-cp-swatch" style="background:${c}"
+            onmousedown="event.preventDefault();fnFormat('${id}','${type}','${c}')"></div>`
+    ).join('') +
+    `<div class="fn-cp-swatch" title="Effacer"
+          onmousedown="event.preventDefault();fnFormat('${id}','${type}','')">✕</div>`;
+
     card.innerHTML = `
-      <input  class="free-note-title" placeholder="Titre…" value="${escHtml(n.title)}"
-              oninput="updateFreeNote('${n.id}','title',this.value)" />
-      <textarea class="free-note-body" placeholder="Écrivez votre note ici…"
-                oninput="updateFreeNote('${n.id}','body',this.value)">${escHtml(n.body)}</textarea>
+      <input class="free-note-title" placeholder="Titre…" value="${escHtml(n.title)}"
+             oninput="updateFreeNote('${n.id}','title',this.value)" />
+      <div class="fn-toolbar">
+        <button class="fn-tb-btn" title="Gras (Ctrl+B)"
+                onmousedown="event.preventDefault();fnFormat('${n.id}','bold')"><b>B</b></button>
+        <button class="fn-tb-btn" title="Italique (Ctrl+I)"
+                onmousedown="event.preventDefault();fnFormat('${n.id}','italic')"><i>I</i></button>
+        <button class="fn-tb-btn" title="Souligner (Ctrl+U)"
+                onmousedown="event.preventDefault();fnFormat('${n.id}','underline')"><u>U</u></button>
+        <button class="fn-tb-btn" title="Barré"
+                onmousedown="event.preventDefault();fnFormat('${n.id}','strikeThrough')"><s>S</s></button>
+        <span class="fn-tb-sep"></span>
+        <div class="fn-color-wrap">
+          <button class="fn-tb-btn" title="Couleur du texte"
+                  onmousedown="event.preventDefault();fnTogglePicker('${n.id}','fg')">
+            <span style="border-bottom:3px solid var(--accent);padding-bottom:1px">A</span>
+          </button>
+          <div class="fn-color-picker" id="fn-cp-fg-${n.id}">${mkSwatches(n.id,'fg',colors)}</div>
+        </div>
+        <div class="fn-color-wrap">
+          <button class="fn-tb-btn" title="Surligner"
+                  onmousedown="event.preventDefault();fnTogglePicker('${n.id}','hl')">🖊</button>
+          <div class="fn-color-picker" id="fn-cp-hl-${n.id}">${mkSwatches(n.id,'hl',hlColors)}</div>
+        </div>
+      </div>
+      <div class="free-note-body" id="fn-body-${n.id}"
+           contenteditable="true" data-placeholder="Écrivez votre note ici…"
+           oninput="updateFreeNote('${n.id}','body',this.innerHTML)">${n.body||''}</div>
       <div class="fn-subnotes" id="fn-snl-${n.id}">${snHtml}</div>
       <div class="fn-add-sn-form" id="fn-snf-${n.id}">
         <input class="fn-add-sn-input" id="fn-sni-${n.id}" placeholder="Ajouter une sous-note…" />
@@ -4988,7 +5056,7 @@ function renderFreeNotes() {
           <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
         </div>
       </div>`;
-    // Scroll fluide avec la molette dans la textarea
+    // Scroll fluide dans le corps de la note
     const ta = card.querySelector('.free-note-body');
     if (ta) {
       ta.addEventListener('wheel', e => {
@@ -4997,6 +5065,10 @@ function renderFreeNotes() {
         if (!atTop && !atBottom) e.stopPropagation();
       }, { passive: true });
     }
+    // Fermer palettes couleurs si clic ailleurs
+    card.addEventListener('mousedown', e => {
+      if (!e.target.closest('.fn-color-wrap')) fnCloseAllPickers();
+    });
     // Keyboard sous-note
     card.querySelector(`#fn-sni-${n.id}`)?.addEventListener('keydown', e => {
       if (e.key === 'Enter')  { e.preventDefault(); saveFnSubnote(n.id); }
@@ -5006,6 +5078,42 @@ function renderFreeNotes() {
     } catch(err) { console.warn('Note corrompue ignorée:', n.id, err); }
   });
 }
+
+// ── Formatage texte des notes libres ────────────────────────────────────────
+function fnFormat(nid, cmd, value) {
+  const body = document.getElementById('fn-body-' + nid);
+  if (body) body.focus();
+  if (cmd === 'fg') {
+    document.execCommand(value ? 'foreColor' : 'removeFormat', false, value || null);
+    if (!value) document.execCommand('foreColor', false, 'inherit');
+  } else if (cmd === 'hl') {
+    document.execCommand(value ? 'hiliteColor' : 'hiliteColor', false, value || 'transparent');
+  } else {
+    document.execCommand(cmd, false, null);
+  }
+  fnCloseAllPickers();
+  // Sauvegarder après formatage
+  setTimeout(() => {
+    if (body) updateFreeNote(nid, 'body', body.innerHTML);
+  }, 0);
+}
+
+function fnTogglePicker(nid, type) {
+  const id  = `fn-cp-${type}-${nid}`;
+  const el  = document.getElementById(id);
+  if (!el) return;
+  const wasOpen = el.classList.contains('open');
+  fnCloseAllPickers();
+  if (!wasOpen) el.classList.add('open');
+}
+
+function fnCloseAllPickers() {
+  document.querySelectorAll('.fn-color-picker.open').forEach(p => p.classList.remove('open'));
+}
+// Fermer palettes si clic hors des notes
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('.fn-color-wrap')) fnCloseAllPickers();
+});
 
 // ── Sous-notes des notes libres ──────────────────────────────────────────────
 function openFnSubnoteForm(nid) {
