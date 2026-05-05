@@ -1255,6 +1255,7 @@
     <button class="btn-icon" onclick="openArchive()">📦 Archive</button>
     <button class="btn-icon" onclick="shareByEmail()">📧 Email</button>
     <button class="btn-icon" onclick="saveToServer()">💾 Sauvegarder</button>
+    <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 GitHub</button>
     <button class="btn-icon" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
     <button class="btn-icon" onclick="clearDone()">🧹 Nettoyer</button>
     <button class="btn-login" id="btn-login-header" onclick="openLoginModal()">
@@ -5187,6 +5188,41 @@ function getQuadInfo(quadId) {
   const cq = customQuads.find(q => q.id === quadId);
   if (cq) return { label: cq.label, color: cq.color, dot: cq.color, icon: '📁', action: cq.label };
   return null;
+}
+
+// ═══════════════════════════════════════════════
+//  DEPLOY TO GITHUB
+// ═══════════════════════════════════════════════
+function deployToGitHub() {
+  const btn = document.getElementById('btn-deploy');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Déploiement…'; }
+
+  const apiUrl = location.protocol === 'file:'
+    ? 'http://localhost:8080/taskflow/api/deploy-github.php'
+    : 'api/deploy-github.php';
+
+  fetch(apiUrl)
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        if (data.hasChanges) {
+          toast('🚀 Déployé sur GitHub avec succès !', 'success');
+        } else {
+          toast('✅ GitHub déjà à jour — rien à envoyer.', 'info');
+        }
+      } else {
+        const errLine = data.log?.find(l => l.code !== 0)?.output || 'Erreur inconnue';
+        toast('❌ Déploiement échoué : ' + errLine.slice(0, 80), 'error');
+        console.error('Deploy error:', data);
+      }
+    })
+    .catch(err => {
+      toast('❌ Impossible de joindre le serveur MAMP. MAMP est-il démarré ?', 'error');
+      console.error('Deploy fetch error:', err);
+    })
+    .finally(() => {
+      if (btn) { btn.disabled = false; btn.textContent = '🚀 GitHub'; }
+    });
 }
 </script>
 
