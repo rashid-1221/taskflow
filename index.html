@@ -4858,18 +4858,18 @@ applyQuadOrder();
 applyQuadSizes();
 checkAutoSave();
 checkDailyAutoBackup();
-checkMorningNotes();
-updateLoginHeader();
-updateFreeNotesBadge();
-setTimeout(checkStaleDoneTasks, 600);
-
 // ═══════════════════════════════════════════════
-//  FREE NOTES
+//  FREE NOTES  (init avant updateFreeNotesBadge)
 // ═══════════════════════════════════════════════
 let freeNotes = (() => {
   try { return JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]'); }
   catch(e) { localStorage.removeItem('taskflow_free_notes'); return []; }
 })();
+
+checkMorningNotes();
+updateLoginHeader();
+updateFreeNotesBadge();
+setTimeout(checkStaleDoneTasks, 600);
 
 function saveFreeNotes() {
   localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
