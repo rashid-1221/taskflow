@@ -1126,33 +1126,40 @@
   /* ══════════ FREE NOTES ══════════ */
   .free-note-card {
     background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 16px;
-    display: flex; flex-direction: column; gap: 8px;
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius); padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 10px;
     transition: var(--trans); position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    min-height: 200px;
   }
-  .free-note-card:hover { border-color: var(--accent); }
+  .free-note-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.28); transform: translateY(-1px); }
   .free-note-title {
     width: 100%; background: none; border: none; border-bottom: 1px solid var(--border);
-    color: var(--text); font-size: .9rem; font-weight: 700;
-    padding: 0 0 6px 0; outline: none; font-family: inherit;
+    color: var(--text); font-size: .95rem; font-weight: 700;
+    padding: 0 0 8px 0; outline: none; font-family: inherit;
   }
   .free-note-title:focus { border-bottom-color: var(--accent); }
   .free-note-body {
     width: 100%; background: none; border: none;
-    color: var(--text2); font-size: .82rem; line-height: 1.6;
-    resize: vertical; min-height: 90px; outline: none; font-family: inherit;
+    color: var(--text2); font-size: .85rem; line-height: 1.7;
+    resize: none; flex: 1; min-height: 100px;
+    outline: none; font-family: inherit; overflow: hidden;
   }
   .free-note-body:focus { color: var(--text); }
   .free-note-footer {
     display: flex; align-items: center; justify-content: space-between;
     font-size: .68rem; color: var(--text3); margin-top: 4px;
+    border-top: 1px solid var(--border); padding-top: 8px; flex-wrap: wrap; gap: 4px;
   }
   .free-note-del {
     background: none; border: none; color: var(--text3);
-    cursor: pointer; font-size: .75rem; padding: 2px 6px;
+    cursor: pointer; font-size: .72rem; padding: 3px 7px;
     border-radius: 4px; transition: var(--trans);
   }
   .free-note-del:hover { color: var(--q1-color); background: rgba(248,81,73,.1); }
+  /* Badge notes actif en vert */
+  .nav-tab.active .nav-tab-badge.has-items { background: rgba(63,185,80,.15); color: var(--q2-color); border-color: rgba(63,185,80,.35); }
 
   /* Sous-notes des notes libres */
   .fn-subnotes { display:flex; flex-direction:column; gap:4px; margin:4px 0 2px; }
@@ -1563,12 +1570,15 @@
 
 <!-- ═══════════ VIEW NOTES ═══════════ -->
 <div class="view" id="view-notes">
-  <div style="max-width:900px;margin:0 auto;padding:24px 16px;">
+  <div style="max-width:1100px;margin:0 auto;padding:24px 16px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-      <h2 style="font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">📓 Notes libres</h2>
+      <h2 style="font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+        📓 Notes libres
+        <span id="notes-count-label" style="font-size:.75rem;font-weight:400;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:2px 9px;"></span>
+      </h2>
       <button class="btn-icon" onclick="addFreeNote()" style="color:var(--q2-color);border-color:rgba(63,185,80,.35)">＋ Nouvelle note</button>
     </div>
-    <div id="free-notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;"></div>
+    <div id="free-notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
     <div id="free-notes-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3);">
       <div style="font-size:2.5rem;margin-bottom:12px;">📓</div>
       <div style="font-size:.9rem;">Aucune note pour l'instant</div>
@@ -4875,8 +4885,16 @@ function saveFreeNotes() {
 }
 
 function updateFreeNotesBadge() {
-  const el = document.getElementById('tab-badge-notes');
-  if (el) el.textContent = freeNotes.length;
+  const count = freeNotes.length;
+  // Badge dans l'onglet nav
+  const badge = document.getElementById('tab-badge-notes');
+  if (badge) {
+    badge.textContent = count;
+    badge.classList.toggle('has-items', count > 0);
+  }
+  // Compteur dans le header de la vue Notes
+  const label = document.getElementById('notes-count-label');
+  if (label) label.textContent = count > 0 ? count + ' note' + (count > 1 ? 's' : '') : '';
 }
 
 function addFreeNote() {
@@ -4961,7 +4979,14 @@ function renderFreeNotes() {
           <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
         </div>
       </div>`;
-    // Keyboard
+    // Auto-resize textarea
+    const ta = card.querySelector('.free-note-body');
+    if (ta) {
+      const resize = () => { ta.style.height = 'auto'; ta.style.height = Math.max(100, ta.scrollHeight) + 'px'; };
+      ta.addEventListener('input', resize);
+      requestAnimationFrame(resize);
+    }
+    // Keyboard sous-note
     card.querySelector(`#fn-sni-${n.id}`)?.addEventListener('keydown', e => {
       if (e.key === 'Enter')  { e.preventDefault(); saveFnSubnote(n.id); }
       if (e.key === 'Escape') { e.preventDefault(); closeFnSubnoteForm(n.id); }
