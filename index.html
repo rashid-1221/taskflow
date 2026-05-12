@@ -726,7 +726,7 @@
   /* ══════════ MODAL ══════════ */
   .modal-overlay {
     position:fixed; inset:0; background:rgba(0,0,0,.72);
-    backdrop-filter:blur(4px); z-index:200;
+    backdrop-filter:blur(4px); z-index:350;
     display:flex; align-items:center; justify-content:center;
     opacity:0; pointer-events:none; transition:opacity .2s;
   }
@@ -1124,30 +1124,86 @@
   .btn-mark-all-seen:hover { background:rgba(63,185,80,.25); }
 
   /* ══════════ FREE NOTES ══════════ */
+  /* ══ Canvas notes libres ══ */
+  .free-notes-canvas {
+    position: relative;
+    min-height: 580px;
+    overflow: visible;
+  }
+  /* ══ Carte de note (positionnée librement) ══ */
   .free-note-card {
     background: var(--bg2); border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
-    border-radius: var(--radius); padding: 16px 18px;
-    display: flex; flex-direction: column; gap: 10px;
-    transition: var(--trans); position: relative;
-    box-shadow: 0 2px 8px rgba(0,0,0,.18);
-    min-height: 200px;
+    border-radius: var(--radius);
+    display: flex; flex-direction: column;
+    position: absolute;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    overflow: hidden;
+    transition: box-shadow .15s, border-color .15s;
+    min-width: 260px; min-height: 200px;
   }
-  .free-note-card:hover { border-color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.28); transform: translateY(-1px); }
+  .free-note-card:hover { border-color: var(--accent); box-shadow: 0 4px 20px rgba(0,0,0,.38); }
+  .free-note-card.dragging { opacity: .92; box-shadow: 0 12px 36px rgba(0,0,0,.55); border-color: var(--accent); cursor: grabbing !important; }
+  .free-note-card.dragging * { cursor: grabbing !important; }
+
+  /* ── Poignée de déplacement ── */
+  .fn-drag-handle {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px 5px;
+    cursor: grab;
+    background: rgba(255,255,255,.025);
+    border-bottom: 1px solid var(--border);
+    user-select: none; flex-shrink: 0;
+  }
+  .fn-drag-handle:hover { background: rgba(255,255,255,.05); }
+  .fn-drag-handle:active { cursor: grabbing; }
+  .fn-drag-dots { color: var(--text3); font-size: .95rem; letter-spacing: 1px; line-height: 1; }
+  .fn-drag-label { font-size: .62rem; color: var(--text3); opacity: .6; flex: 1; }
+  .fn-collapse-btn {
+    background: none; border: none; cursor: pointer; color: var(--text3);
+    font-size: .8rem; padding: 0 4px; line-height: 1; border-radius: 4px;
+    opacity: .7; transition: opacity .15s, color .15s;
+  }
+  .fn-collapse-btn:hover { opacity: 1; color: var(--accent); }
+  /* Carte réduite */
+  .free-note-card.collapsed { height: auto !important; min-height: 0 !important; }
+  .free-note-card.collapsed .fn-card-body { display: none; }
+  .free-note-card.collapsed .fn-resize-handle { display: none; }
+  .free-note-card.collapsed .fn-drag-handle { border-bottom: none; }
+
+  /* ── Zone de contenu ── */
+  .fn-card-body {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 12px 14px 10px; flex: 1; overflow: hidden;
+  }
+
+  /* ── Poignée de redimensionnement ── */
+  .fn-resize-handle {
+    position: absolute; right: 0; bottom: 0;
+    width: 18px; height: 18px;
+    cursor: nwse-resize;
+    color: var(--text3); font-size: .65rem;
+    display: flex; align-items: flex-end; justify-content: flex-end;
+    padding: 2px 3px; user-select: none;
+    transition: color .15s;
+  }
+  .fn-resize-handle:hover { color: var(--accent); }
+
   .free-note-title {
     width: 100%; background: none; border: none; border-bottom: 1px solid var(--border);
     color: var(--text); font-size: .95rem; font-weight: 700;
-    padding: 0 0 8px 0; outline: none; font-family: inherit;
+    padding: 0 0 7px 0; outline: none; font-family: inherit; flex-shrink: 0;
   }
   .free-note-title:focus { border-bottom-color: var(--accent); }
   .free-note-body {
     width: 100%; background: none; border: none;
     color: var(--text2); font-size: .85rem; line-height: 1.7;
-    resize: none; flex: 1; min-height: 100px; max-height: 220px;
+    resize: none; flex: 1;
     outline: none; font-family: inherit;
     overflow-y: auto; cursor: text;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
+    min-height: 60px;
   }
   .free-note-body::-webkit-scrollbar { width: 5px; }
   .free-note-body::-webkit-scrollbar-track { background: transparent; }
@@ -1293,11 +1349,31 @@
 
   <div class="header-actions">
     <span class="sync-indicator" id="sync-dot" style="display:none"></span>
-    <button class="btn-icon" id="btn-undo-global" onclick="undoLastAction()"
-      style="opacity:.35;pointer-events:none;" title="Rien à annuler" disabled>↩ Annuler</button>
+    <div style="position:relative;display:inline-flex;gap:2px;">
+      <button class="btn-icon" id="btn-undo-global" onclick="undoLastAction()"
+        style="opacity:.35;pointer-events:none;border-radius:7px 0 0 7px;border-right:none;"
+        title="Rien à annuler" disabled>↩ Annuler</button>
+      <button class="btn-icon" id="btn-undo-history" onclick="toggleUndoPanel(event)"
+        style="opacity:.35;pointer-events:none;border-radius:0 7px 7px 0;padding:5px 7px;"
+        title="Historique des actions" disabled>▾</button>
+      <button class="btn-icon" id="btn-redo-global" onclick="redoLastAction()"
+        style="opacity:.35;pointer-events:none;" title="Rien à rétablir" disabled>↪ Rétablir</button>
+      <!-- Panneau historique undo -->
+      <div id="undo-history-panel"
+        style="display:none;position:absolute;top:calc(100% + 8px);left:0;z-index:500;
+          min-width:300px;max-width:380px;max-height:380px;overflow-y:auto;
+          background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+          box-shadow:0 8px 32px rgba(0,0,0,.45);padding:8px;">
+        <div style="font-size:.72rem;color:var(--text3);padding:4px 8px 6px;border-bottom:1px solid var(--border);margin-bottom:6px;display:flex;justify-content:space-between;">
+          <span>📋 Historique — cliquer pour revenir à cet état</span>
+          <button onclick="closeUndoPanel()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.85rem;">✕</button>
+        </div>
+        <div id="undo-history-list"></div>
+      </div>
+    </div>
     <button class="btn-icon" onclick="openArchive()">📦 Archive</button>
     <button class="btn-icon" onclick="shareByEmail()">📧 Email</button>
-    <button class="btn-icon" onclick="saveToServer()">💾 Sauvegarder</button>
+    <button class="btn-icon" onclick="saveToServer('manual')">💾 Sauvegarder</button>
     <button class="btn-icon" id="btn-firebase" onclick="openFirebaseModal()" title="Se connecter à Firebase" style="color:var(--text3);">🔥 Firebase</button>
     <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 GitHub</button>
     <button class="btn-icon" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
@@ -1615,15 +1691,21 @@
 
 <!-- ═══════════ VIEW NOTES ═══════════ -->
 <div class="view" id="view-notes">
-  <div style="max-width:1100px;margin:0 auto;padding:24px 16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+  <div style="padding:24px 16px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
       <h2 style="font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:8px;">
         📓 Notes libres
         <span id="notes-count-label" style="font-size:.75rem;font-weight:400;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:2px 9px;"></span>
       </h2>
-      <button class="btn-icon" onclick="addFreeNote()" style="color:var(--q2-color);border-color:rgba(63,185,80,.35)">＋ Nouvelle note</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span id="notes-save-indicator" style="font-size:.72rem;color:var(--q2-color);opacity:0;transition:opacity .4s;user-select:none;">✓ Sauvegardé</span>
+        <button class="btn-icon" onclick="arrangeNotesGrid()" title="Réorganiser en grille" style="color:var(--text2);font-size:.78rem;padding:5px 11px;">⊞ Grille</button>
+        <button class="btn-icon" onclick="addFreeNote()" style="color:var(--q2-color);border-color:rgba(63,185,80,.35)">＋ Nouvelle note</button>
+      </div>
     </div>
-    <div id="free-notes-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;"></div>
+  </div>
+  <div style="padding:0 16px 40px;overflow:auto;">
+    <div id="free-notes-grid" class="free-notes-canvas"></div>
     <div id="free-notes-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--text3);">
       <div style="font-size:2.5rem;margin-bottom:12px;">📓</div>
       <div style="font-size:.9rem;">Aucune note pour l'instant</div>
@@ -1788,7 +1870,8 @@
       <!-- Tabs -->
       <div class="restore-tabs">
         <button class="restore-tab active" onclick="switchRestoreTab('file',this)">📂 Fichier local</button>
-        <button class="restore-tab" id="restore-tab-server" onclick="switchRestoreTab('server',this)">🖥 Depuis le serveur</button>
+        <button class="restore-tab" id="restore-tab-server" onclick="switchRestoreTab('server',this)">🖥 Serveur</button>
+        <button class="restore-tab" id="restore-tab-auto" onclick="switchRestoreTab('auto',this)">⏱ Auto-saves</button>
       </div>
 
       <!-- TAB: fichier local -->
@@ -1802,6 +1885,18 @@
           <div class="drop-zone-icon">📂</div>
           <div><strong>Cliquer pour choisir un fichier</strong> ou glisser-déposer ici</div>
           <div style="font-size:.72rem;margin-top:4px;color:var(--text3)">Format JSON — fichiers taskflow-sauvegarde-*.json</div>
+        </div>
+      </div>
+
+      <!-- TAB: auto-saves -->
+      <div class="restore-tab-panel" id="rtp-auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:.78rem;color:var(--text3)">Sauvegardes automatiques (toutes les 2 min) :</span>
+          <button class="btn-icon" style="font-size:.72rem;padding:3px 9px;" onclick="renderAutoSaveList()">🔄 Actualiser</button>
+        </div>
+        <div id="autosave-list" style="max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;
+          scrollbar-width:thin;scrollbar-color:var(--border) transparent;">
+          <div style="padding:20px;text-align:center;color:var(--text3);font-size:.8rem">Chargement…</div>
         </div>
       </div>
 
@@ -1889,9 +1984,28 @@ let snoozeSpanState = localStorage.getItem(SNOOZE_SPAN_KEY) || 'full';
 let manualSortQuads = new Set(JSON.parse(localStorage.getItem('taskflow_manualsort') || '[]'));
 let maximizedQuad = null;
 
+// Custom quadrants — déclaré ici pour éviter le TDZ (utilisé dans renderAll)
+let customQuads = (() => {
+  try { return JSON.parse(localStorage.getItem('taskflow_custom_quads') || '[]'); }
+  catch(e) { return []; }
+})();
+
 // Notes libres — déclaré ici pour éviter le Temporal Dead Zone (TDZ)
 let freeNotes = (() => {
-  try { return JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]'); }
+  try {
+    const raw = JSON.parse(localStorage.getItem('taskflow_free_notes') || '[]');
+    // Migrer les anciennes notes sans position vers des positions par défaut
+    const CARD_W = 320, CARD_H = 260, GAP_X = 350, GAP_Y = 300;
+    const cols   = Math.max(1, Math.floor((window.innerWidth - 32) / GAP_X));
+    raw.forEach((n, i) => {
+      if (n.x == null) n.x = 20 + (i % cols) * GAP_X;
+      if (n.y == null) n.y = 20 + Math.floor(i / cols) * GAP_Y;
+      if (n.w == null) n.w = CARD_W;
+      if (n.h == null) n.h = CARD_H;
+      if (n.z == null) n.z = 100 + i;
+    });
+    return raw;
+  }
   catch(e) { localStorage.removeItem('taskflow_free_notes'); return []; }
 })();
 
@@ -1917,20 +2031,31 @@ function cap(s) { if (!s) return s; return s.charAt(0).toUpperCase() + s.slice(1
 //  UNDO GLOBAL (10 niveaux)
 // ═══════════════════════════════════════════════
 let actionHistory = [];
-const MAX_UNDO = 10;
+let redoStack     = [];
+const MAX_UNDO    = 15;
 
 function pushHistory(desc) {
   actionHistory.push({
     tasks:      JSON.parse(JSON.stringify(tasks)),
     todayTasks: JSON.parse(JSON.stringify(todayTasks)),
-    desc
+    desc,
+    ts: Date.now()
   });
   if (actionHistory.length > MAX_UNDO) actionHistory.shift();
+  redoStack = []; // toute nouvelle action efface le redo
   updateUndoBtn();
 }
 
 function undoLastAction() {
+  closeUndoPanel();
   if (!actionHistory.length) { toast('Rien à annuler', 'info'); return; }
+  // Sauvegarder l'état actuel dans redoStack avant d'annuler
+  redoStack.push({
+    tasks:      JSON.parse(JSON.stringify(tasks)),
+    todayTasks: JSON.parse(JSON.stringify(todayTasks)),
+    desc: 'État avant annulation',
+    ts:   Date.now()
+  });
   const entry = actionHistory.pop();
   tasks      = entry.tasks;
   todayTasks = entry.todayTasks;
@@ -1940,23 +2065,133 @@ function undoLastAction() {
   updateUndoBtn();
 }
 
+function undoToIndex(idx) {
+  // Revenir à un état précis dans l'historique (idx = index dans actionHistory)
+  closeUndoPanel();
+  if (idx < 0 || idx >= actionHistory.length) return;
+  // Sauvegarder l'état actuel dans redo
+  redoStack.push({
+    tasks:      JSON.parse(JSON.stringify(tasks)),
+    todayTasks: JSON.parse(JSON.stringify(todayTasks)),
+    desc: 'État avant retour historique',
+    ts:   Date.now()
+  });
+  // Les états après idx deviennent du redo
+  const removed = actionHistory.splice(idx + 1);
+  removed.reverse().forEach(e => redoStack.push(e));
+  const entry = actionHistory.pop();
+  tasks      = entry.tasks;
+  todayTasks = entry.todayTasks;
+  save(); saveToday(); renderAll();
+  if (currentView === 'today') renderToday();
+  toast(`↩ Retour : ${entry.desc}`, 'info');
+  updateUndoBtn();
+}
+
+function redoLastAction() {
+  if (!redoStack.length) { toast('Rien à rétablir', 'info'); return; }
+  const entry = redoStack.pop();
+  // Sauvegarder l'état actuel dans l'historique SANS effacer redoStack
+  actionHistory.push({
+    tasks:      JSON.parse(JSON.stringify(tasks)),
+    todayTasks: JSON.parse(JSON.stringify(todayTasks)),
+    desc:       '← avant rétablissement',
+    ts:         Date.now()
+  });
+  if (actionHistory.length > MAX_UNDO) actionHistory.shift();
+  // Restaurer
+  tasks      = entry.tasks;
+  todayTasks = entry.todayTasks;
+  save(); saveToday(); renderAll();
+  if (currentView === 'today') renderToday();
+  toast(`↪ Rétabli : ${entry.desc}`, 'info');
+  updateUndoBtn();
+}
+
+function toggleUndoPanel(e) {
+  e?.stopPropagation();
+  const panel = document.getElementById('undo-history-panel');
+  if (!panel) return;
+  const isOpen = panel.style.display === 'block';
+  if (isOpen) { closeUndoPanel(); return; }
+  renderUndoPanel();
+  panel.style.display = 'block';
+  // Fermer si clic ailleurs
+  setTimeout(() => document.addEventListener('click', _closeUndoPanelOutside, { once:true }), 0);
+}
+
+function _closeUndoPanelOutside(e) {
+  const panel = document.getElementById('undo-history-panel');
+  if (panel && !panel.contains(e.target)) closeUndoPanel();
+}
+
+function closeUndoPanel() {
+  const panel = document.getElementById('undo-history-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function renderUndoPanel() {
+  const list = document.getElementById('undo-history-list');
+  if (!list) return;
+  if (!actionHistory.length) {
+    list.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:.8rem;">Aucune action dans l\'historique</div>';
+    return;
+  }
+  // Afficher du plus récent au plus ancien
+  const items = [...actionHistory].reverse();
+  list.innerHTML = items.map((entry, i) => {
+    const realIdx = actionHistory.length - 1 - i; // index réel dans actionHistory
+    const ago     = _timeAgo(entry.ts);
+    const isLast  = i === 0;
+    return `<div onclick="undoToIndex(${realIdx})"
+      style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;
+        cursor:pointer;transition:background .12s;margin-bottom:2px;
+        background:${isLast ? 'rgba(88,166,255,.08)' : 'transparent'};
+        border-left:2px solid ${isLast ? 'var(--accent)' : 'transparent'};"
+      onmouseover="this.style.background='rgba(88,166,255,.12)'"
+      onmouseout="this.style.background='${isLast ? 'rgba(88,166,255,.08)' : 'transparent'}'">
+      <span style="font-size:.72rem;color:var(--text3);min-width:28px;text-align:right;">${i === 0 ? '⬅' : '#' + (items.length - i)}</span>
+      <span style="flex:1;font-size:.81rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(entry.desc)}</span>
+      <span style="font-size:.68rem;color:var(--text3);white-space:nowrap;">${ago}</span>
+    </div>`;
+  }).join('');
+}
+
+function _timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60)  return 'il y a ' + s + 's';
+  if (s < 3600) return 'il y a ' + Math.floor(s/60) + 'min';
+  return 'il y a ' + Math.floor(s/3600) + 'h';
+}
+
 function updateUndoBtn() {
-  const btn = document.getElementById('btn-undo-global');
-  if (!btn) return;
-  const n = actionHistory.length;
-  if (n === 0) {
-    btn.style.opacity = '.35';
-    btn.style.pointerEvents = 'none';
-    btn.disabled = true;
-    btn.title = 'Rien à annuler';
-    btn.textContent = '↩ Annuler';
-  } else {
-    btn.style.opacity = '1';
-    btn.style.pointerEvents = '';
-    btn.disabled = false;
-    const last = actionHistory[n - 1].desc;
-    btn.title = `Annuler : ${last}  (${n}/${MAX_UNDO})`;
-    btn.textContent = `↩ Annuler (${n})`;
+  const btn     = document.getElementById('btn-undo-global');
+  const btnHist = document.getElementById('btn-undo-history');
+  const btnRedo = document.getElementById('btn-redo-global');
+  const n       = actionHistory.length;
+  const r       = redoStack.length;
+
+  if (btn) {
+    const active = n > 0;
+    btn.style.opacity = active ? '1' : '.35';
+    btn.style.pointerEvents = active ? '' : 'none';
+    btn.disabled = !active;
+    btn.title    = active ? `Annuler : ${actionHistory[n-1].desc}  (${n}/${MAX_UNDO})` : 'Rien à annuler';
+    btn.textContent = active ? `↩ Annuler (${n})` : '↩ Annuler';
+  }
+  if (btnHist) {
+    const active = n > 0;
+    btnHist.style.opacity = active ? '1' : '.35';
+    btnHist.style.pointerEvents = active ? '' : 'none';
+    btnHist.disabled = !active;
+  }
+  if (btnRedo) {
+    const active = r > 0;
+    btnRedo.style.opacity = active ? '1' : '.35';
+    btnRedo.style.pointerEvents = active ? '' : 'none';
+    btnRedo.disabled = !active;
+    btnRedo.title    = active ? `Rétablir : ${redoStack[r-1].desc}  (${r})` : 'Rien à rétablir';
+    btnRedo.textContent = active ? `↪ Rétablir (${r})` : '↪ Rétablir';
   }
 }
 
@@ -1969,7 +2204,7 @@ function switchView(v) {
   document.getElementById('view-' + v).classList.add('active');
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + v).classList.add('active');
-  if (v === 'today') { renderToday(); }
+  if (v === 'today') { checkMorningNotes(true); renderToday(); }
   if (v === 'notes') { renderFreeNotes(); }
   if (v === 'matrice') { renderCustomQuads(); }
 }
@@ -3134,8 +3369,8 @@ function saveToServer(type) {
         localStorage.setItem('taskflow_daily_date', new Date().toISOString().slice(0,10));
         toast('🕓 Sauvegarde auto — ' + r.ts, 'success');
       } else {
-        const info = r.count ? ` (${r.count}/7 cette semaine)` : '';
-        toast(`💾 Sauvegardé — ${r.path}${info}`, 'success');
+        const todayInfo = r.todayCount ? ` · ${r.todayCount} save${r.todayCount>1?'s':''} aujourd\'hui` : '';
+        toast(`💾 Sauvegardé à ${r.ts}${todayInfo}`, 'success');
       }
     } else {
       if (type !== 'daily') toast('❌ Erreur serveur : ' + r.error, 'error');
@@ -3154,51 +3389,100 @@ function saveToServer(type) {
   });
 }
 
-// ── Sauvegarde automatique quotidienne 16h00–17h00 ──────────────────────────
-const DAILY_BACKUP_KEY = 'taskflow_daily_date';
-
-function checkDailyAutoBackup() {
-  const now   = new Date();
-  const h     = now.getHours();
-  const today = now.toISOString().slice(0,10);
-  const last  = localStorage.getItem(DAILY_BACKUP_KEY) || '';
-  // Fenêtre : entre 16h00 et 17h00, une seule fois par jour
-  if (h >= 16 && h < 17 && last !== today) {
-    saveToServer('daily');
-  }
+// ═══════════════════════════════════════════════
+//  AUTO-SAVE SERVEUR — toutes les 2 minutes
+//  → sauvegarde/daily/  (20 derniers snapshots)
+// ═══════════════════════════════════════════════
+function runAutoSave() {
+  const now = new Date();
+  const data = {
+    tasks, todayTasks, freeNotes,
+    savedAt: now.toISOString(),
+    label: now.toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }),
+    version: 'auto-v1'
+  };
+  fetch('api/auto-save.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.ok) {
+      updateAutoSaveIndicator(true, res.saved);
+    }
+  })
+  .catch(() => { /* silencieux si hors ligne */ });
 }
-// Vérification toutes les 5 minutes
-setInterval(checkDailyAutoBackup, 5 * 60 * 1000);
+
+function updateAutoSaveIndicator(ok, filename) {
+  let dot = document.getElementById('autosave-dot');
+  if (!dot) {
+    dot = document.createElement('span');
+    dot.id = 'autosave-dot';
+    dot.style.cssText = 'font-size:.65rem;color:var(--text3);margin-right:4px;transition:color .3s;cursor:help;';
+    const syncDot = document.getElementById('sync-dot');
+    if (syncDot?.parentNode) syncDot.parentNode.insertBefore(dot, syncDot);
+  }
+  const ts = new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+  dot.textContent = '🛡';
+  dot.title = `✅ Auto-save à ${ts} — ↩ Restaurer pour récupérer`;
+  dot.style.color = 'var(--q2-color)';
+  setTimeout(() => { dot.style.color = 'var(--text3)'; }, 4000);
+}
+
+// Auto-save toutes les 2 minutes
+setInterval(runAutoSave, 2 * 60 * 1000);
+// Première auto-save 30s après le chargement
+setTimeout(runAutoSave, 30 * 1000);
 
 // ── Notes du matin (8h30) ───────────────────────────────────────────────────
 const MORNING_NOTES_KEY = 'taskflow_morning_notes_date';
-const MORNING_NOTES = ['☑ Check agenda', '📬 Check emails'];
 
-function checkMorningNotes() {
-  const now   = new Date();
-  const h     = now.getHours();
-  const m     = now.getMinutes();
-  const today = now.toISOString().slice(0,10);
+function getMorningTasks() {
+  try { return JSON.parse(localStorage.getItem('taskflow_morning_tasks') || '[]'); }
+  catch(e) { return []; }
+}
+function saveMorningTasks(arr) {
+  localStorage.setItem('taskflow_morning_tasks', JSON.stringify(arr));
+}
+
+// Tâches du matin par défaut si aucune n'est configurée
+const DEFAULT_MORNING_TASKS = ['☑ Check agenda', '📬 Check emails'];
+
+function checkMorningNotes(fromTabClick = false) {
+  const today = new Date().toISOString().slice(0,10);
   const last  = localStorage.getItem(MORNING_NOTES_KEY) || '';
-  if (last === today) return;            // déjà ajoutées aujourd'hui
-  if (h < 8 || (h === 8 && m < 30)) return; // pas encore 8h30
+  if (last === today) return;   // déjà ajoutées aujourd'hui
 
-  MORNING_NOTES.forEach(title => {
-    // Eviter les doublons si la page est rechargée après ajout
-    if (todayTasks.some(t => t.title === title)) return;
+  // Se déclenche : soit au clic sur l'onglet Aujourd'hui, soit dès 8h00
+  const h = new Date().getHours();
+  if (!fromTabClick && h < 8) return;
+
+  const tasks_matin = getMorningTasks();
+  const liste = tasks_matin.length ? tasks_matin : DEFAULT_MORNING_TASKS;
+
+  let added = 0;
+  liste.forEach(title => {
+    if (todayTasks.some(t => t.title === title)) return; // éviter doublons
     todayTasks.unshift({
       id: uid(), title, done: false,
       originQuad: null, originTaskId: null,
       notes: [], subnotes: [], createdAt: Date.now(), addedAt: Date.now()
     });
+    added++;
   });
 
-  localStorage.setItem(MORNING_NOTES_KEY, today);
-  saveToday();
-  if (currentView === 'today') renderToday();
-  toast('☀️ Rappels du matin ajoutés dans Aujourd\'hui', 'gold');
+  if (added > 0) {
+    localStorage.setItem(MORNING_NOTES_KEY, today);
+    saveToday();
+    if (currentView === 'today') renderToday();
+    toast(`☀️ ${added} rappel${added>1?'s':''} du matin ajouté${added>1?'s':''} !`, 'gold');
+  } else {
+    localStorage.setItem(MORNING_NOTES_KEY, today);
+  }
 }
-setInterval(checkMorningNotes, 60 * 1000); // vérifie chaque minute
+setInterval(() => checkMorningNotes(false), 60 * 1000); // vérifie chaque minute
 
 // ── Sauvegarder layout + données avant fermeture ────────────────────────────
 window.addEventListener('beforeunload', function() {
@@ -3493,6 +3777,13 @@ function checkAutoSave() {
 }
 
 // ═══════════════════════════════════════════════
+//  AUTO-SAVE SERVEUR (toutes les 15 min)
+//  → C:\MAMP\htdocs\taskflow\sauvegarde\daily\
+//  Rétention PHP :
+//    • Aujourd'hui : 2 dernières sauvegardes
+//    • Jours passés : 1 seule sauvegarde par jour
+
+// ═══════════════════════════════════════════════
 //  RESTORE — Restaurer une sauvegarde
 // ═══════════════════════════════════════════════
 let restoreData = null; // holds parsed backup ready to apply
@@ -3519,6 +3810,58 @@ function switchRestoreTab(tab, btn) {
   btn.classList.add('active');
   document.getElementById('rtp-' + tab).classList.add('active');
   if (tab === 'server') loadServerBackupList();
+  if (tab === 'auto')   renderAutoSaveList();
+}
+
+function renderAutoSaveList() {
+  const list = document.getElementById('autosave-list');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text3);font-size:.8rem;">⏳ Chargement…</div>';
+
+  fetch('api/list-auto-saves.php')
+    .then(r => r.json())
+    .then(saves => {
+      if (!saves.length) {
+        list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:.8rem;">
+          <div style="font-size:1.5rem;margin-bottom:6px">⏱</div>
+          Aucune auto-save pour l'instant<br>
+          <span style="font-size:.72rem">La première sera créée dans 2 minutes</span>
+        </div>`;
+        return;
+      }
+      // Regrouper par jour
+      const grouped = {};
+      saves.forEach(s => {
+        const day = s.savedAt ? s.savedAt.slice(0,10) : 'Inconnu';
+        (grouped[day] = grouped[day] || []).push(s);
+      });
+      const today = new Date().toISOString().slice(0,10);
+      list.innerHTML = Object.entries(grouped).map(([day, items]) => {
+        const label = day === today ? "☀️ Aujourd'hui" :
+          new Date(day).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+        return `<div style="margin-bottom:4px;">
+          <div style="font-size:.68rem;color:var(--text3);padding:4px 6px;font-weight:600;text-transform:uppercase;">${label} <span style="font-weight:400">(${items.length})</span></div>
+          ${items.map(s => `
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;
+              background:var(--bg3);border:1px solid var(--border);margin-bottom:3px;cursor:pointer;transition:border-color .12s;"
+              onclick="previewAutoSave('${escHtml(s.file)}')"
+              onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+              <span style="font-size:.8rem;color:var(--text);flex:1;">💾 ${escHtml(s.label)}</span>
+              <span style="font-size:.68rem;color:var(--text3);">${Math.round(s.size/1024)}KB</span>
+            </div>`).join('')}
+        </div>`;
+      }).join('');
+    })
+    .catch(() => {
+      list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text3);font-size:.8rem;">⚠️ Serveur non accessible (ouvre via localhost)</div>';
+    });
+}
+
+function previewAutoSave(filename) {
+  fetch('api/get-auto-save.php?file=' + encodeURIComponent(filename))
+    .then(r => r.json())
+    .then(data => previewBackup(data, data.label || filename))
+    .catch(() => toast('❌ Auto-save inaccessible', 'error'));
 }
 
 // ── File drop zone ──
@@ -3803,20 +4146,10 @@ function togglePlanned(id, e) {
   if (!t) return;
   pushHistory(`${t.planned?'Déplanifiée':'Planifiée'} "${t.title}"`);
   t.planned = !t.planned;
-  if (t.planned && t.quad !== 'q2') {
-    t._prevQuad = t.quad; // mémoriser le quadrant d'origine
-    t.quad = 'q2';
-    save(); renderAll();
-    toast('📌 Planifiée → déplacée en Q2 (Important & Non Urgent)', 'success');
-  } else if (!t.planned && t._prevQuad) {
-    t.quad = t._prevQuad;
-    delete t._prevQuad;
-    save(); renderAll();
-    toast('Retirée des planifiées → retour en ' + (QUADS[t.quad]?.label.split('—')[0]||t.quad), 'info');
-  } else {
-    save(); renderAll();
-    toast(t.planned ? '📌 Planifiée (déjà en Q2)' : 'Retirée des planifiées', 'info');
-  }
+  // La tâche reste dans son quadrant d'origine — seul le badge change
+  delete t._prevQuad;
+  save(); renderAll();
+  toast(t.planned ? '📌 Planifiée — la tâche reste dans son quadrant' : '📌 Retiré des planifiées', 'info');
 }
 
 // ═══════════════════════════════════════════════
@@ -4449,6 +4782,8 @@ document.addEventListener('keydown', e => {
 //  DEMO DATA
 // ═══════════════════════════════════════════════
 function loadDemoIfEmpty() {
+  // Ne charger la démo que lors de la toute première visite (clé absente du LS)
+  if (localStorage.getItem(STORAGE_KEY) !== null) return;
   if (tasks.length > 0) return;
   const now   = Date.now();
   const today = new Date().toISOString().slice(0,10);
@@ -4551,6 +4886,9 @@ function loadDemoIfEmpty() {
 }
 
 function loadTodayDemoIfEmpty() {
+  // Ne charger la démo que lors de la toute première visite (clé absente du LS)
+  // Si la clé existe (même vide []), l'utilisateur a déjà utilisé l'app → ne pas écraser
+  if (localStorage.getItem(TODAY_KEY) !== null) return;
   if (todayTasks.length > 0) return;
   const now = Date.now();
   todayTasks = [
@@ -4918,15 +5256,27 @@ renderAll();
 applyQuadOrder();
 applyQuadSizes();
 checkAutoSave();
-checkDailyAutoBackup();
 checkMorningNotes();
 updateLoginHeader();
 updateFreeNotesBadge();
 setTimeout(checkStaleDoneTasks, 600);
 
+// Garantir la sauvegarde des notes avant fermeture/rechargement de page
+window.addEventListener('beforeunload', () => {
+  localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
+});
+
+let _saveNoteTimer = null;
 function saveFreeNotes() {
   localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
   updateFreeNotesBadge();
+  // Indicateur visuel discret "✓ Sauvegardé"
+  clearTimeout(_saveNoteTimer);
+  const ind = document.getElementById('notes-save-indicator');
+  if (ind) {
+    ind.style.opacity = '1';
+    _saveNoteTimer = setTimeout(() => { ind.style.opacity = '0'; }, 1500);
+  }
 }
 
 function updateFreeNotesBadge() {
@@ -4944,7 +5294,17 @@ function updateFreeNotesBadge() {
 
 function addFreeNote() {
   try {
-    const note = { id: uid(), title: '', body: '', subnotes: [], createdAt: Date.now(), updatedAt: Date.now() };
+    // Cascade position : décalage de 30px pour chaque nouvelle note
+    const idx   = freeNotes.length;
+    const cols  = Math.max(1, Math.floor((document.getElementById('free-notes-grid')?.offsetWidth || 1060) / 360));
+    const col   = idx % cols;
+    const row   = Math.floor(idx / cols);
+    const note = {
+      id: uid(), title: '', body: '', subnotes: [],
+      x: 20 + col * 350, y: 20 + row * 300, w: 320, h: 260,
+      z: ++_noteZCounter,
+      createdAt: Date.now(), updatedAt: Date.now()
+    };
     freeNotes.unshift(note);
     saveFreeNotes();
     if (currentView !== 'notes') switchView('notes');
@@ -4975,6 +5335,33 @@ function updateFreeNote(id, field, value) {
   n[field] = field === 'title' ? cap(value) : value;
   n.updatedAt = Date.now();
   saveFreeNotes();
+  // Mettre à jour le titre affiché dans la poignée sans re-render complet
+  if (field === 'title') {
+    const card = document.getElementById('fn-card-' + id);
+    const label = card?.querySelector('.fn-drag-label');
+    if (label) label.textContent = cap(value) || 'Sans titre';
+  }
+}
+
+function toggleCollapseNote(id) {
+  const n = freeNotes.find(x => x.id === id);
+  if (!n) return;
+  n.collapsed = !n.collapsed;
+  saveFreeNotes();
+  // Mettre à jour la carte directement sans re-render complet
+  const card = document.getElementById('fn-card-' + id);
+  if (!card) return;
+  card.classList.toggle('collapsed', n.collapsed);
+  const btn = card.querySelector('.fn-collapse-btn');
+  if (btn) {
+    btn.textContent = n.collapsed ? '▶' : '▼';
+    btn.title = n.collapsed ? 'Agrandir' : 'Réduire';
+  }
+  // Rétablir la hauteur stockée si on expand
+  if (!n.collapsed) {
+    card.style.height = (n.h || 260) + 'px';
+  }
+  updateNotesCanvasSize();
 }
 
 function renderFreeNotes() {
@@ -5009,54 +5396,69 @@ function renderFreeNotes() {
     `<div class="fn-cp-swatch" title="Effacer"
           onmousedown="event.preventDefault();fnFormat('${id}','${type}','')">✕</div>`;
 
+    // ── Position absolue (déjà migrée au chargement) ──
+    card.style.cssText = `left:${n.x||20}px;top:${n.y||20}px;width:${n.w||320}px;height:${n.h||260}px;z-index:${n.z||100};`;
+
+    // Appliquer l'état réduit si collapsed
+    if (n.collapsed) card.classList.add('collapsed');
+
     card.innerHTML = `
-      <input class="free-note-title" placeholder="Titre…" value="${escHtml(n.title)}"
-             oninput="updateFreeNote('${n.id}','title',this.value)" />
-      <div class="fn-toolbar">
-        <button class="fn-tb-btn" title="Gras (Ctrl+B)"
-                onmousedown="event.preventDefault();fnFormat('${n.id}','bold')"><b>B</b></button>
-        <button class="fn-tb-btn" title="Italique (Ctrl+I)"
-                onmousedown="event.preventDefault();fnFormat('${n.id}','italic')"><i>I</i></button>
-        <button class="fn-tb-btn" title="Souligner (Ctrl+U)"
-                onmousedown="event.preventDefault();fnFormat('${n.id}','underline')"><u>U</u></button>
-        <button class="fn-tb-btn" title="Barré"
-                onmousedown="event.preventDefault();fnFormat('${n.id}','strikeThrough')"><s>S</s></button>
-        <span class="fn-tb-sep"></span>
-        <div class="fn-color-wrap">
-          <button class="fn-tb-btn" title="Couleur du texte"
-                  onmousedown="event.preventDefault();fnTogglePicker('${n.id}','fg')">
-            <span style="border-bottom:3px solid var(--accent);padding-bottom:1px">A</span>
-          </button>
-          <div class="fn-color-picker" id="fn-cp-fg-${n.id}">${mkSwatches(n.id,'fg',colors)}</div>
+      <div class="fn-drag-handle">
+        <span class="fn-drag-dots">⠿⠿</span>
+        <span class="fn-drag-label" style="font-size:.75rem;color:var(--text2);opacity:.9;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escHtml(n.title)||'Sans titre'}</span>
+        <button class="fn-collapse-btn" title="${n.collapsed?'Agrandir':'Réduire'}"
+                onclick="toggleCollapseNote('${n.id}')">${n.collapsed?'▶':'▼'}</button>
+      </div>
+      <div class="fn-card-body">
+        <input class="free-note-title" placeholder="Titre…" value="${escHtml(n.title)}"
+               oninput="updateFreeNote('${n.id}','title',this.value)" />
+        <div class="fn-toolbar">
+          <button class="fn-tb-btn" title="Gras (Ctrl+B)"
+                  onmousedown="event.preventDefault();fnFormat('${n.id}','bold')"><b>B</b></button>
+          <button class="fn-tb-btn" title="Italique (Ctrl+I)"
+                  onmousedown="event.preventDefault();fnFormat('${n.id}','italic')"><i>I</i></button>
+          <button class="fn-tb-btn" title="Souligner (Ctrl+U)"
+                  onmousedown="event.preventDefault();fnFormat('${n.id}','underline')"><u>U</u></button>
+          <button class="fn-tb-btn" title="Barré"
+                  onmousedown="event.preventDefault();fnFormat('${n.id}','strikeThrough')"><s>S</s></button>
+          <span class="fn-tb-sep"></span>
+          <div class="fn-color-wrap">
+            <button class="fn-tb-btn" title="Couleur du texte"
+                    onmousedown="event.preventDefault();fnTogglePicker('${n.id}','fg')">
+              <span style="border-bottom:3px solid var(--accent);padding-bottom:1px">A</span>
+            </button>
+            <div class="fn-color-picker" id="fn-cp-fg-${n.id}">${mkSwatches(n.id,'fg',colors)}</div>
+          </div>
+          <div class="fn-color-wrap">
+            <button class="fn-tb-btn" title="Surligner"
+                    onmousedown="event.preventDefault();fnTogglePicker('${n.id}','hl')">🖊</button>
+            <div class="fn-color-picker" id="fn-cp-hl-${n.id}">${mkSwatches(n.id,'hl',hlColors)}</div>
+          </div>
         </div>
-        <div class="fn-color-wrap">
-          <button class="fn-tb-btn" title="Surligner"
-                  onmousedown="event.preventDefault();fnTogglePicker('${n.id}','hl')">🖊</button>
-          <div class="fn-color-picker" id="fn-cp-hl-${n.id}">${mkSwatches(n.id,'hl',hlColors)}</div>
+        <div class="free-note-body" id="fn-body-${n.id}"
+             contenteditable="true" data-placeholder="Écrivez votre note ici…"
+             oninput="updateFreeNote('${n.id}','body',this.innerHTML)">${n.body||''}</div>
+        <div class="fn-subnotes" id="fn-snl-${n.id}">${snHtml}</div>
+        <div class="fn-add-sn-form" id="fn-snf-${n.id}">
+          <input class="fn-add-sn-input" id="fn-sni-${n.id}" placeholder="Ajouter une sous-note…" />
+          <button class="subnote-ok" onclick="saveFnSubnote('${n.id}')">＋ OK</button>
+          <button class="subnote-cancel" onclick="closeFnSubnoteForm('${n.id}')">✕</button>
+        </div>
+        <div class="free-note-footer">
+          <div style="display:flex;align-items:center;gap:4px;">
+            <span>${new Date(n.updatedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
+            ${snCount}
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="free-note-del" onclick="openFnSubnoteForm('${n.id}')" style="color:var(--accent)">＋ Sous-note</button>
+            <button class="free-note-del" onclick="copyFreeNoteTitle('${n.id}')">📋</button>
+            <button class="free-note-del" onclick="addFreeNoteToCalendar('${n.id}')" style="color:var(--q2-color)">📅</button>
+            <button class="free-note-del" onclick="emailFreeNote('${n.id}')" title="Email">📧</button>
+            <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑</button>
+          </div>
         </div>
       </div>
-      <div class="free-note-body" id="fn-body-${n.id}"
-           contenteditable="true" data-placeholder="Écrivez votre note ici…"
-           oninput="updateFreeNote('${n.id}','body',this.innerHTML)">${n.body||''}</div>
-      <div class="fn-subnotes" id="fn-snl-${n.id}">${snHtml}</div>
-      <div class="fn-add-sn-form" id="fn-snf-${n.id}">
-        <input class="fn-add-sn-input" id="fn-sni-${n.id}" placeholder="Ajouter une sous-note…" />
-        <button class="subnote-ok" onclick="saveFnSubnote('${n.id}')">＋ OK</button>
-        <button class="subnote-cancel" onclick="closeFnSubnoteForm('${n.id}')">✕</button>
-      </div>
-      <div class="free-note-footer">
-        <div style="display:flex;align-items:center;gap:4px;">
-          <span>${new Date(n.updatedAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
-          ${snCount}
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="free-note-del" onclick="openFnSubnoteForm('${n.id}')" style="color:var(--accent)">＋ Sous-note</button>
-          <button class="free-note-del" onclick="copyFreeNoteTitle('${n.id}')">📋 Copier</button>
-          <button class="free-note-del" onclick="addFreeNoteToCalendar('${n.id}')" style="color:var(--q2-color)">📅 Agenda</button>
-          <button class="free-note-del" onclick="emailFreeNote('${n.id}')" title="Envoyer par email">📧 Email</button>
-          <button class="free-note-del" onclick="deleteFreeNote('${n.id}')">🗑 Supprimer</button>
-        </div>
-      </div>`;
+      <div class="fn-resize-handle" title="Redimensionner">⊞</div>`;
     // Scroll fluide dans le corps de la note
     const ta = card.querySelector('.free-note-body');
     if (ta) {
@@ -5069,6 +5471,8 @@ function renderFreeNotes() {
     // Fermer palettes couleurs si clic ailleurs
     card.addEventListener('mousedown', e => {
       if (!e.target.closest('.fn-color-wrap')) fnCloseAllPickers();
+      // Mettre la carte au premier plan
+      bringNoteToFront(card, n);
     });
     // Keyboard sous-note
     card.querySelector(`#fn-sni-${n.id}`)?.addEventListener('keydown', e => {
@@ -5076,8 +5480,132 @@ function renderFreeNotes() {
       if (e.key === 'Escape') { e.preventDefault(); closeFnSubnoteForm(n.id); }
     });
     grid.appendChild(card);
+    // Drag & Resize
+    makeDraggableNote(card, n);
+    makeResizableNote(card, n);
     } catch(err) { console.warn('Note corrompue ignorée:', n.id, err); }
   });
+  // Adapter la hauteur du canvas
+  requestAnimationFrame(updateNotesCanvasSize);
+}
+
+// ══════════════════════════════════════════════════════════
+//  DRAG, RESIZE & CANVAS — Notes libres
+// ══════════════════════════════════════════════════════════
+let _noteZCounter = 200;
+
+function bringNoteToFront(card, n) {
+  _noteZCounter++;
+  card.style.zIndex = _noteZCounter;
+  n.z = _noteZCounter;
+}
+
+function updateNotesCanvasSize() {
+  const canvas = document.getElementById('free-notes-grid');
+  if (!canvas) return;
+  let maxY = 580;
+  canvas.querySelectorAll('.free-note-card').forEach(c => {
+    const bottom = (parseInt(c.style.top)||0) + (parseInt(c.style.height)||260) + 40;
+    if (bottom > maxY) maxY = bottom;
+  });
+  canvas.style.minHeight = maxY + 'px';
+}
+
+function makeDraggableNote(card, n) {
+  const handle = card.querySelector('.fn-drag-handle');
+  if (!handle) return;
+  let startX, startY, startLeft, startTop, dragging = false;
+
+  handle.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (e.target.closest('input, button, [contenteditable]')) return;
+    e.preventDefault();
+    dragging    = true;
+    startX      = e.clientX;
+    startY      = e.clientY;
+    startLeft   = parseInt(card.style.left)  || 0;
+    startTop    = parseInt(card.style.top)   || 0;
+    bringNoteToFront(card, n);
+    card.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const newLeft = Math.max(0, startLeft + dx);
+    const newTop  = Math.max(0, startTop  + dy);
+    card.style.left = newLeft + 'px';
+    card.style.top  = newTop  + 'px';
+    updateNotesCanvasSize();
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!dragging) return;
+    dragging = false;
+    card.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    n.x = parseInt(card.style.left)  || 0;
+    n.y = parseInt(card.style.top)   || 0;
+    saveFreeNotes();
+  });
+}
+
+function makeResizableNote(card, n) {
+  const handle = card.querySelector('.fn-resize-handle');
+  if (!handle) return;
+  let startX, startY, startW, startH, resizing = false;
+
+  handle.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    resizing = true;
+    startX   = e.clientX;
+    startY   = e.clientY;
+    startW   = card.offsetWidth;
+    startH   = card.offsetHeight;
+    bringNoteToFront(card, n);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor     = 'nwse-resize';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!resizing) return;
+    const newW = Math.max(260, startW + (e.clientX - startX));
+    const newH = Math.max(180, startH + (e.clientY - startY));
+    card.style.width  = newW + 'px';
+    card.style.height = newH + 'px';
+    updateNotesCanvasSize();
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!resizing) return;
+    resizing = false;
+    document.body.style.userSelect = '';
+    document.body.style.cursor     = '';
+    n.w = parseInt(card.style.width)  || 320;
+    n.h = parseInt(card.style.height) || 260;
+    saveFreeNotes();
+  });
+}
+
+// Réorganiser toutes les notes en grille
+function arrangeNotesGrid() {
+  const canvas = document.getElementById('free-notes-grid');
+  if (!canvas || !freeNotes.length) return;
+  const cols   = Math.max(1, Math.floor((canvas.offsetWidth || 1060) / 360));
+  freeNotes.forEach((n, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    n.x = 20 + col * 350;
+    n.y = 20 + row * 300;
+    n.w = 320; n.h = 260; n.z = 100 + i;
+  });
+  saveFreeNotes();
+  renderFreeNotes();
+  toast('⊞ Notes réorganisées en grille', 'info');
 }
 
 // ── Formatage texte des notes libres ────────────────────────────────────────
@@ -5181,7 +5709,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ═══════════════════════════════════════════════
 //  CUSTOM QUADRANTS
 // ═══════════════════════════════════════════════
-let customQuads = JSON.parse(localStorage.getItem('taskflow_custom_quads') || '[]');
+// (customQuads déclaré plus haut pour éviter TDZ)
 
 // Inject built-in "Amélioration" quad if not already present
 (function() {
@@ -5432,27 +5960,52 @@ function deployToGitHub() {
     </div>
   </div>
 </div>
-<!-- ═══════════ BOUTON COMMENTAIRE AMÉLIORATION ═══════════ -->
-<button id="comment-fab" onclick="toggleCommentPanel()" title="Ajouter une idée d'amélioration"
+<!-- ═══════════ BOUTON IDÉE D'AMÉLIORATION ═══════════ -->
+<button id="comment-fab" onclick="toggleCommentPanel()" title="Idées d'amélioration"
   style="position:fixed;bottom:90px;right:22px;z-index:400;
     width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
     background:linear-gradient(135deg,#0ea5e9,#0284c7);
     color:#fff;font-size:1.3rem;box-shadow:0 4px 14px rgba(14,165,233,.45);
-    display:flex;align-items:center;justify-content:center;transition:transform .15s;">💬</button>
+    display:flex;align-items:center;justify-content:center;transition:transform .2s;">💡</button>
 
 <div id="comment-panel"
   style="display:none;position:fixed;bottom:145px;right:22px;z-index:401;
-    width:min(320px,92vw);background:var(--bg2);border:1px solid var(--border);
-    border-radius:14px;padding:16px;box-shadow:0 8px 32px rgba(0,0,0,.35);
-    flex-direction:column;gap:10px;">
-  <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:2px;">💬 Idée d'amélioration</div>
-  <input id="comment-input" class="sync-input" placeholder="Décrivez votre idée…"
-    onkeydown="if(event.key==='Enter')saveCommentIdea();if(event.key==='Escape')toggleCommentPanel()" />
-  <textarea id="comment-body" class="sync-input" placeholder="Détails (optionnel)…"
-    rows="3" style="resize:vertical;font-family:inherit;font-size:.82rem;line-height:1.5;"></textarea>
-  <div style="display:flex;gap:8px;">
-    <button class="sync-btn primary" onclick="saveCommentIdea()" style="flex:1">＋ Ajouter</button>
-    <button class="sync-btn" onclick="toggleCommentPanel()">Annuler</button>
+    width:min(340px,93vw);max-height:72vh;
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.45);
+    flex-direction:column;overflow:hidden;">
+
+  <!-- En-tête -->
+  <div style="display:flex;align-items:center;justify-content:space-between;
+    padding:12px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
+    background:var(--bg3);">
+    <span style="font-size:.85rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px;">
+      💡 Idées d'amélioration
+      <span id="idea-count-badge" style="font-size:.68rem;background:var(--bg4);border:1px solid var(--border);
+        border-radius:8px;padding:1px 7px;color:var(--text3);font-weight:400;"></span>
+    </span>
+    <button onclick="toggleCommentPanel()"
+      style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;
+        line-height:1;padding:2px 6px;border-radius:4px;"
+      title="Fermer">✕</button>
+  </div>
+
+  <!-- Formulaire ajout -->
+  <div style="padding:12px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <input id="comment-input" class="sync-input" placeholder="Titre de l'idée…"
+      style="margin-bottom:7px;"
+      onkeydown="if(event.key==='Enter')saveCommentIdea();if(event.key==='Escape')toggleCommentPanel()" />
+    <textarea id="comment-body" class="sync-input" placeholder="Détails (optionnel)…"
+      rows="2" style="resize:none;font-family:inherit;font-size:.81rem;line-height:1.5;margin-bottom:8px;"></textarea>
+    <button class="sync-btn primary" onclick="saveCommentIdea()"
+      style="width:100%;font-size:.82rem;padding:7px;">＋ Ajouter l'idée</button>
+  </div>
+
+  <!-- Liste des idées -->
+  <div id="comment-ideas-list"
+    style="flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px;
+      scrollbar-width:thin;scrollbar-color:var(--border) transparent;">
+    <!-- rempli par renderCommentIdeas() -->
   </div>
 </div>
 
@@ -5462,23 +6015,64 @@ function toggleCommentPanel() {
   const fab   = document.getElementById('comment-fab');
   const open  = panel.style.display === 'flex';
   panel.style.display = open ? 'none' : 'flex';
-  fab.style.transform  = open ? '' : 'rotate(20deg)';
-  if (!open) { setTimeout(() => document.getElementById('comment-input')?.focus(), 60); }
+  fab.style.transform  = open ? '' : 'rotate(15deg) scale(1.08)';
+  if (!open) {
+    renderCommentIdeas();
+    setTimeout(() => document.getElementById('comment-input')?.focus(), 60);
+  }
 }
+
 function saveCommentIdea() {
-  const title = cap(document.getElementById('comment-input').value.trim());
-  if (!title) { document.getElementById('comment-input').focus(); return; }
-  const desc  = document.getElementById('comment-body').value.trim();
+  const inp   = document.getElementById('comment-input');
+  const title = cap(inp.value.trim());
+  if (!title) { inp.focus(); inp.style.borderColor='var(--q1-color)'; setTimeout(()=>inp.style.borderColor='',900); return; }
+  const desc   = document.getElementById('comment-body').value.trim();
   const quadId = 'builtin-amelioration';
   manualSortQuads.add(quadId);
   localStorage.setItem('taskflow_manualsort', JSON.stringify([...manualSortQuads]));
   tasks.push({ id:uid(), title, desc, quad:quadId, tag:'', due:'', status:'pending',
     comments:[], subnotes:[], createdAt:Date.now() });
   save(); renderAll();
-  document.getElementById('comment-input').value  = '';
-  document.getElementById('comment-body').value   = '';
-  toggleCommentPanel();
-  toast('💬 Idée ajoutée dans Amélioration ✓', 'success');
+  inp.value = '';
+  document.getElementById('comment-body').value = '';
+  inp.focus();
+  renderCommentIdeas();
+  toast('💡 Idée enregistrée !', 'success');
+}
+
+function renderCommentIdeas() {
+  const list  = document.getElementById('comment-ideas-list');
+  const badge = document.getElementById('idea-count-badge');
+  if (!list) return;
+  const ideas = tasks.filter(t => t.quad === 'builtin-amelioration' && t.status !== 'deleted')
+                     .sort((a,b) => b.createdAt - a.createdAt);
+  if (badge) badge.textContent = ideas.length ? ideas.length + ' idée' + (ideas.length>1?'s':'') : '';
+  if (!ideas.length) {
+    list.innerHTML = `<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:.8rem;">
+      <div style="font-size:1.8rem;margin-bottom:6px;">💡</div>Aucune idée pour l'instant</div>`;
+    return;
+  }
+  list.innerHTML = ideas.map(t => `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid #0ea5e9;
+      border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:4px;position:relative;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <span style="font-size:.82rem;font-weight:600;color:var(--text);flex:1;line-height:1.4;">${escHtml(t.title)}</span>
+        <button onclick="deleteCommentIdea('${t.id}')"
+          style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.75rem;
+            padding:1px 4px;border-radius:3px;flex-shrink:0;transition:color .12s;"
+          onmouseover="this.style.color='var(--q1-color)'" onmouseout="this.style.color='var(--text3)'"
+          title="Supprimer">✕</button>
+      </div>
+      ${t.desc ? `<div style="font-size:.75rem;color:var(--text2);line-height:1.5;">${escHtml(t.desc)}</div>` : ''}
+      <div style="font-size:.65rem;color:var(--text3);">${new Date(t.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('');
+}
+
+function deleteCommentIdea(id) {
+  const t = tasks.find(x => x.id === id);
+  if (t) { t.status = 'deleted'; t.deletedAt = Date.now(); }
+  save(); renderAll();
+  renderCommentIdeas();
 }
 </script>
 <!-- ═══════════ FIREBASE SDK ═══════════ -->
