@@ -1309,6 +1309,7 @@
     .quick-input-wrap input { font-size:.9rem; padding:10px 14px 10px 38px; }
     .quick-selects          { gap:6px; flex-wrap:wrap; }
     .quick-selects select   { flex:1; min-width:calc(50% - 3px); font-size:.78rem; padding:7px 8px; }
+    .quick-date             { flex:1; min-width:calc(50% - 3px); font-size:.78rem !important; padding:7px 8px !important; box-sizing:border-box; width:100%; }
     .btn-add                { width:100%; padding:11px; font-size:.9rem; border-radius:10px; }
 
     /* ── Filtres ── */
@@ -1933,7 +1934,7 @@
         <option value="finance">💰 Finance</option>
         <option value="autre">📌 Autre</option>
       </select>
-      <input type="date" id="quick-due" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 9px;font-size:.8rem;outline:none;" />
+      <input type="date" id="quick-due" class="quick-date" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 9px;font-size:.8rem;outline:none;" />
     </div>
     <button class="btn-add" onclick="quickAdd()">+ Ajouter</button>
   </div>
