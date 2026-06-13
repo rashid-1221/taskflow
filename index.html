@@ -1213,8 +1213,41 @@
   @media (max-width:900px) {
     main { grid-template-columns:1fr; }
     .stats-grid { grid-template-columns:1fr 1fr; }
-    .header-actions { display:none; }
+    .header-actions { display:flex; gap:6px; }
+    .header-actions .mobile-hide { display:none !important; }
+    .header-actions .search-wrap { display:none; }
+    #btn-firebase .btn-label, #btn-more-toggle .btn-label { display:none; }
   }
+  @media (min-width:901px) {
+    #btn-more-toggle { display:none; }
+    #mobile-drawer  { display:none !important; }
+  }
+
+  /* ── Mobile drawer ── */
+  #mobile-drawer {
+    position:fixed; inset:0; z-index:800;
+  }
+  #mobile-drawer-overlay {
+    position:absolute; inset:0; background:rgba(0,0,0,.55);
+  }
+  #mobile-drawer-panel {
+    position:absolute; bottom:0; left:0; right:0;
+    background:var(--bg2); border-radius:18px 18px 0 0;
+    padding:16px 16px 32px; display:flex; flex-direction:column; gap:10px;
+    box-shadow:0 -8px 32px rgba(0,0,0,.4);
+  }
+  #mobile-drawer-panel .drawer-title {
+    font-size:.75rem; color:var(--text3); text-align:center;
+    padding-bottom:8px; border-bottom:1px solid var(--border);
+    margin-bottom:4px;
+  }
+  #mobile-drawer-panel button {
+    width:100%; text-align:left; padding:12px 16px;
+    font-size:.92rem; border-radius:10px;
+    background:var(--bg3); border:1px solid var(--border);
+    color:var(--text); cursor:pointer; display:flex; align-items:center; gap:10px;
+  }
+  #mobile-drawer-panel button:active { background:var(--bg4); }
   @media (max-width:600px) {
     .quick-selects { flex-wrap:wrap; }
     .nav-tabs { gap:0; }
@@ -1610,23 +1643,47 @@
         <div id="undo-history-list"></div>
       </div>
     </div>
-    <button class="btn-icon" id="btn-theme" onclick="toggleTheme()" title="Basculer thème clair / sombre">🌙 Sombre</button>
-    <button class="btn-icon" onclick="openArchive()">📦 Archive</button>
-    <button class="btn-icon" onclick="shareByEmail()">📧 Email</button>
-    <button class="btn-icon" onclick="saveToServer('manual')">💾 Sauvegarder</button>
-    <button class="btn-icon" id="btn-firebase" onclick="openFirebaseModal()" title="Se connecter à Firebase" style="color:var(--text3);">🔥 Firebase</button>
-    <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 GitHub</button>
-    <button class="btn-icon" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
-    <button class="btn-icon" onclick="clearDone()">🧹 Nettoyer</button>
-    <div class="search-wrap">
+    <button class="btn-icon mobile-hide" id="btn-theme" onclick="toggleTheme()" title="Basculer thème clair / sombre">🌙 Sombre</button>
+    <button class="btn-icon mobile-hide" onclick="openArchive()">📦 Archive</button>
+    <button class="btn-icon mobile-hide" onclick="shareByEmail()">📧 Email</button>
+    <button class="btn-icon mobile-hide" onclick="saveToServer('manual')">💾 Sauvegarder</button>
+    <button class="btn-icon" id="btn-firebase" onclick="openFirebaseModal()" title="Se connecter à Firebase" style="color:var(--text3);">🔥 <span class="btn-label">Firebase</span></button>
+    <button class="btn-icon mobile-hide" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 GitHub</button>
+    <button class="btn-icon mobile-hide" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
+    <button class="btn-icon mobile-hide" onclick="clearDone()">🧹 Nettoyer</button>
+    <div class="search-wrap mobile-hide">
       <input class="search-filter" type="text" id="search-input" placeholder="Rechercher…" oninput="renderAll()" />
     </div>
-    <button class="btn-login" id="btn-login-header" onclick="openLoginModal()">
+    <button class="btn-login mobile-hide" id="btn-login-header" onclick="openLoginModal()">
       <div class="avatar-bubble" id="login-avatar">👤</div>
       <span id="login-label">Connexion</span>
     </button>
+    <!-- Bouton ⋯ mobile uniquement -->
+    <button class="btn-icon" id="btn-more-toggle" onclick="openMobileDrawer()" title="Plus d'options">⋯</button>
   </div>
 </header>
+
+<!-- ═══ MOBILE DRAWER ═══ -->
+<div id="mobile-drawer" style="display:none;">
+  <div id="mobile-drawer-overlay" onclick="closeMobileDrawer()"></div>
+  <div id="mobile-drawer-panel">
+    <div class="drawer-title">Plus d'options</div>
+    <div style="display:flex;gap:8px;padding:4px 0 8px;">
+      <input class="search-filter" type="text" id="search-input-mobile" placeholder="🔍 Rechercher…"
+        oninput="document.getElementById('search-input').value=this.value;renderAll();"
+        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+               color:var(--text);padding:10px 14px;font-size:.9rem;outline:none;" />
+    </div>
+    <button onclick="closeMobileDrawer();toggleTheme()">🌙 Thème clair / sombre</button>
+    <button onclick="closeMobileDrawer();openArchive()">📦 Archive</button>
+    <button onclick="closeMobileDrawer();shareByEmail()">📧 Partager par email</button>
+    <button onclick="closeMobileDrawer();saveToServer('manual')">💾 Sauvegarder</button>
+    <button onclick="closeMobileDrawer();openRestoreModal()" style="color:var(--q2-color)">↩ Restaurer</button>
+    <button onclick="closeMobileDrawer();clearDone()">🧹 Nettoyer les tâches faites</button>
+    <button onclick="closeMobileDrawer();undoLastAction()">↩ Annuler</button>
+    <button onclick="closeMobileDrawer();redoLastAction()">↪ Rétablir</button>
+  </div>
+</div>
 
 <!-- ═══════════ VIEW MATRICE ═══════════ -->
 <div class="view active" id="view-matrice">
@@ -8078,6 +8135,14 @@ function updateFbHeaderBtn() {
 document.getElementById('firebase-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('firebase-modal')) closeFirebaseModal();
 });
+
+// ── Mobile drawer ───────────────────────────────────────────────────────────
+function openMobileDrawer() {
+  document.getElementById('mobile-drawer').style.display = 'block';
+}
+function closeMobileDrawer() {
+  document.getElementById('mobile-drawer').style.display = 'none';
+}
 
 // ── Service Worker (PWA) ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
