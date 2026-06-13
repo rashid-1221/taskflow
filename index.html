@@ -1297,6 +1297,8 @@
     .header-actions .mobile-hide { display:none !important; }
     #btn-firebase                { padding:8px 12px; font-size:1rem; gap:0; }
     #btn-firebase .btn-label     { display:none; }
+    #btn-deploy                  { padding:8px 12px; font-size:1rem; gap:0; }
+    #btn-deploy .btn-label       { display:none; }
     #btn-more-toggle             { padding:8px 13px; font-size:1.1rem; font-weight:900; }
 
     /* ── Barre d'ajout rapide ── */
@@ -1830,7 +1832,7 @@
     <button class="btn-icon mobile-hide" onclick="shareByEmail()">📧 Email</button>
     <button class="btn-icon mobile-hide" onclick="saveToServer('manual')">💾 Sauvegarder</button>
     <button class="btn-icon" id="btn-firebase" onclick="openFirebaseModal()" title="Se connecter à Firebase" style="color:var(--text3);">🔥 <span class="btn-label">Firebase</span></button>
-    <button class="btn-icon mobile-hide" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 GitHub</button>
+    <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀</button>
     <button class="btn-icon mobile-hide" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
     <button class="btn-icon mobile-hide" onclick="clearDone()">🧹 Nettoyer</button>
     <div class="search-wrap mobile-hide">
@@ -1893,6 +1895,9 @@
       </button>
       <button class="drawer-btn" onclick="closeMobileDrawer();saveToServer('manual')">
         <span class="db-icon">💾</span>Sauvegarder
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();deployToGitHub()" style="color:#e6b800;">
+        <span class="db-icon">🚀</span>GitHub
       </button>
       <button class="drawer-btn" onclick="closeMobileDrawer();openRestoreModal()" style="color:var(--q2-color)">
         <span class="db-icon">↩</span>Restaurer
