@@ -1210,49 +1210,181 @@
   @keyframes urgency-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.75;transform:scale(1.06)} }
 
   /* Responsive */
-  @media (max-width:900px) {
-    main { grid-template-columns:1fr; }
-    .stats-grid { grid-template-columns:1fr 1fr; }
-    .header-actions { display:flex; gap:6px; }
-    .header-actions .mobile-hide { display:none !important; }
-    .header-actions .search-wrap { display:none; }
-    #btn-firebase .btn-label, #btn-more-toggle .btn-label { display:none; }
-  }
-  @media (min-width:901px) {
-    #btn-more-toggle { display:none; }
-    #mobile-drawer  { display:none !important; }
+  /* ════════════════════════════════════════
+     RESPONSIVE — MOBILE / TABLETTE
+  ════════════════════════════════════════ */
+
+  /* Desktop : éléments mobiles cachés */
+  @media (min-width:769px) {
+    #btn-more-toggle { display:none !important; }
+    #mobile-drawer   { display:none !important; }
   }
 
-  /* ── Mobile drawer ── */
+  /* ── Tablette (≤1024px) ── */
+  @media (max-width:1024px) {
+    main            { padding:10px 14px; gap:10px; }
+    .stats-grid     { padding:8px 14px; }
+    .quick-add-bar  { padding:8px 14px; }
+    .filters-bar    { padding:7px 14px; }
+  }
+
+  /* ══════════════════════════════════════
+     MOBILE (≤768px)
+  ══════════════════════════════════════ */
+  @media (max-width:768px) {
+
+    /* ── Header ── */
+    header { padding:0 10px; height:48px; gap:6px; }
+    .logo  { font-size:.9rem; gap:5px; }
+    .logo span { display:none; }
+
+    /* ── Navigation ── */
+    .nav-tabs { gap:0; flex:1; }
+    .nav-tab  { padding:0 8px; font-size:.72rem; gap:3px; flex:1; justify-content:center; }
+    .nav-tab-badge { display:none; }
+
+    /* ── Boutons header ── */
+    .header-actions              { gap:5px; flex-shrink:0; }
+    .header-actions .mobile-hide { display:none !important; }
+    #btn-firebase                { padding:7px 10px; font-size:1.05rem; gap:0; }
+    #btn-firebase .btn-label     { display:none; }
+    #btn-more-toggle             { padding:7px 13px; font-size:1.1rem; font-weight:900; letter-spacing:.05em; }
+
+    /* ── Barre d'ajout rapide ── */
+    .quick-add-bar {
+      padding:8px 12px;
+      flex-direction:column;
+      gap:7px;
+      align-items:stretch;
+    }
+    .quick-input-wrap input { font-size:.9rem; padding:10px 14px 10px 38px; }
+    .quick-selects          { gap:6px; flex-wrap:wrap; }
+    .quick-selects select   { flex:1; min-width:calc(50% - 3px); font-size:.78rem; padding:7px 8px; }
+    .btn-add                { width:100%; padding:11px; font-size:.9rem; border-radius:10px; }
+
+    /* ── Filtres ── */
+    .filters-bar { padding:6px 12px; gap:5px; overflow-x:auto; flex-wrap:nowrap; }
+    .filters-bar::-webkit-scrollbar { display:none; }
+    .filter-chip { font-size:.72rem; padding:5px 11px; white-space:nowrap; flex-shrink:0; }
+
+    /* ── Stats ── */
+    .stats-grid       { grid-template-columns:1fr 1fr; padding:8px 12px; gap:6px; }
+    .stat-card        { padding:10px 12px; }
+    .stat-card-value  { font-size:1.35rem; }
+    .stat-card-label  { font-size:.65rem; }
+
+    /* ── Matrice Eisenhower ── */
+    main {
+      grid-template-columns: 1fr;
+      padding: 8px 12px;
+      gap: 10px;
+    }
+    .quadrant,
+    .quadrant[data-size="1"],
+    .quadrant[data-size="2"],
+    .quadrant[data-size="3"],
+    .quadrant[data-size="4"],
+    .quadrant[data-size="5"] { height:230px; }
+
+    /* ── Cartes de tâches ── */
+    .task-card  { padding:12px 14px; }
+    .task-check { width:20px; height:20px; border-radius:5px; flex-shrink:0; }
+    .task-title { font-size:.88rem; }
+
+    /* ── Vue Aujourd'hui / Focus ── */
+    .today-list-body { padding:10px 12px; }
+    #focus-list-body { padding:10px 12px; }
+
+    /* ── Modales : tiroir du bas ── */
+    .modal-overlay {
+      align-items:flex-end;
+    }
+    .modal {
+      width:100%     !important;
+      max-width:100% !important;
+      max-height:92vh !important;
+      border-radius:18px 18px 0 0 !important;
+      border-left:none !important;
+      border-right:none !important;
+      border-bottom:none !important;
+      transform:translateY(40px) scale(1) !important;
+    }
+    .modal-overlay.open .modal { transform:translateY(0) scale(1) !important; }
+    .modal-header { padding:14px 16px; }
+    .modal-body   { padding:14px 16px; }
+
+    /* ── Firebase modal ── */
+    #firebase-modal > div {
+      width:100%     !important;
+      max-width:100% !important;
+      border-radius:18px 18px 0 0 !important;
+      position:absolute !important;
+      bottom:0 !important;
+      margin:0 !important;
+      max-height:92vh !important;
+    }
+
+    /* ── Notes libres ── */
+    .free-notes-canvas { padding:8px; }
+  }
+
+  /* ── Très petit écran (≤400px) ── */
+  @media (max-width:400px) {
+    .nav-tab  { padding:0 5px; font-size:.68rem; }
+    .logo     { font-size:.82rem; }
+    .quick-selects select { min-width:100%; }
+    .stat-card-value { font-size:1.2rem; }
+  }
+
+  /* ════════════════════════════════════════
+     MOBILE DRAWER (tiroir bas)
+  ════════════════════════════════════════ */
   #mobile-drawer {
-    position:fixed; inset:0; z-index:800;
+    position:fixed; inset:0; z-index:900;
   }
   #mobile-drawer-overlay {
-    position:absolute; inset:0; background:rgba(0,0,0,.55);
+    position:absolute; inset:0; background:rgba(0,0,0,.6);
   }
   #mobile-drawer-panel {
     position:absolute; bottom:0; left:0; right:0;
-    background:var(--bg2); border-radius:18px 18px 0 0;
-    padding:16px 16px 32px; display:flex; flex-direction:column; gap:10px;
-    box-shadow:0 -8px 32px rgba(0,0,0,.4);
+    background:var(--bg2); border-radius:20px 20px 0 0;
+    padding:0 0 calc(20px + env(safe-area-inset-bottom));
+    display:flex; flex-direction:column;
+    box-shadow:0 -12px 40px rgba(0,0,0,.5);
+    max-height:88vh; overflow-y:auto;
   }
-  #mobile-drawer-panel .drawer-title {
-    font-size:.75rem; color:var(--text3); text-align:center;
-    padding-bottom:8px; border-bottom:1px solid var(--border);
-    margin-bottom:4px;
+  .drawer-handle {
+    width:40px; height:4px; background:var(--border);
+    border-radius:2px; margin:12px auto 0; flex-shrink:0;
   }
-  #mobile-drawer-panel button {
-    width:100%; text-align:left; padding:12px 16px;
-    font-size:.92rem; border-radius:10px;
+  .drawer-title {
+    font-size:.7rem; color:var(--text3); text-align:center;
+    padding:10px 16px 12px; letter-spacing:.06em;
+    text-transform:uppercase; border-bottom:1px solid var(--border);
+  }
+  .drawer-search {
+    padding:10px 14px 4px;
+  }
+  .drawer-search input {
+    width:100%; background:var(--bg3); border:1px solid var(--border);
+    border-radius:10px; color:var(--text); padding:10px 14px;
+    font-size:.9rem; outline:none;
+  }
+  .drawer-search input:focus { border-color:var(--accent); }
+  .drawer-grid {
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:8px; padding:12px 14px;
+  }
+  .drawer-btn {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; padding:14px 10px;
     background:var(--bg3); border:1px solid var(--border);
-    color:var(--text); cursor:pointer; display:flex; align-items:center; gap:10px;
+    border-radius:14px; color:var(--text); cursor:pointer;
+    font-size:.82rem; font-weight:600; text-align:center;
+    transition:var(--trans); min-height:72px;
   }
-  #mobile-drawer-panel button:active { background:var(--bg4); }
-  @media (max-width:600px) {
-    .quick-selects { flex-wrap:wrap; }
-    .nav-tabs { gap:0; }
-    .nav-tab { padding:0 12px; font-size:.8rem; }
-  }
+  .drawer-btn:active { background:var(--bg4); transform:scale(.96); }
+  .drawer-btn .db-icon { font-size:1.4rem; line-height:1; }
 
   /* ══════════ FEATURE 1: Inline quad add form ══════════ */
   .q-inline-add {
@@ -1667,21 +1799,38 @@
 <div id="mobile-drawer" style="display:none;">
   <div id="mobile-drawer-overlay" onclick="closeMobileDrawer()"></div>
   <div id="mobile-drawer-panel">
-    <div class="drawer-title">Plus d'options</div>
-    <div style="display:flex;gap:8px;padding:4px 0 8px;">
-      <input class="search-filter" type="text" id="search-input-mobile" placeholder="🔍 Rechercher…"
-        oninput="document.getElementById('search-input').value=this.value;renderAll();"
-        style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;
-               color:var(--text);padding:10px 14px;font-size:.9rem;outline:none;" />
+    <div class="drawer-handle"></div>
+    <div class="drawer-title">Menu</div>
+    <div class="drawer-search">
+      <input type="text" id="search-input-mobile" placeholder="🔍 Rechercher une tâche…"
+        oninput="document.getElementById('search-input').value=this.value; renderAll();" />
     </div>
-    <button onclick="closeMobileDrawer();toggleTheme()">🌙 Thème clair / sombre</button>
-    <button onclick="closeMobileDrawer();openArchive()">📦 Archive</button>
-    <button onclick="closeMobileDrawer();shareByEmail()">📧 Partager par email</button>
-    <button onclick="closeMobileDrawer();saveToServer('manual')">💾 Sauvegarder</button>
-    <button onclick="closeMobileDrawer();openRestoreModal()" style="color:var(--q2-color)">↩ Restaurer</button>
-    <button onclick="closeMobileDrawer();clearDone()">🧹 Nettoyer les tâches faites</button>
-    <button onclick="closeMobileDrawer();undoLastAction()">↩ Annuler</button>
-    <button onclick="closeMobileDrawer();redoLastAction()">↪ Rétablir</button>
+    <div class="drawer-grid">
+      <button class="drawer-btn" onclick="closeMobileDrawer();toggleTheme()">
+        <span class="db-icon">🌙</span>Thème
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();openArchive()">
+        <span class="db-icon">📦</span>Archive
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();shareByEmail()">
+        <span class="db-icon">📧</span>Email
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();saveToServer('manual')">
+        <span class="db-icon">💾</span>Sauvegarder
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();openRestoreModal()" style="color:var(--q2-color)">
+        <span class="db-icon">↩</span>Restaurer
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();clearDone()">
+        <span class="db-icon">🧹</span>Nettoyer
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();undoLastAction()">
+        <span class="db-icon">↩</span>Annuler
+      </button>
+      <button class="drawer-btn" onclick="closeMobileDrawer();redoLastAction()">
+        <span class="db-icon">↪</span>Rétablir
+      </button>
+    </div>
   </div>
 </div>
 
