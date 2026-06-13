@@ -1245,7 +1245,7 @@
   .mob-nav-badge.visible { display:block; }
 
   /* Desktop : éléments mobiles cachés */
-  @media (min-width:769px) {
+  @media (min-width:901px) {
     #btn-more-toggle { display:none !important; }
     #mobile-drawer   { display:none !important; }
     #mobile-nav      { display:none !important; }
@@ -1259,16 +1259,14 @@
     .filters-bar    { padding:7px 14px; }
   }
 
-  /* ── 1 colonne dès 900px ── */
+  /* ══════════════════════════════════════
+     MOBILE (≤900px)
+  ══════════════════════════════════════ */
   @media (max-width:900px) {
+
+    /* ── Matrice 1 colonne ── */
     main { grid-template-columns:1fr; }
     .stats-grid { grid-template-columns:1fr 1fr; }
-  }
-
-  /* ══════════════════════════════════════
-     MOBILE (≤768px)
-  ══════════════════════════════════════ */
-  @media (max-width:768px) {
 
     /* ── Navigation déplacée en bas ── */
     #mobile-nav  { display:block; }
