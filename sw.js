@@ -1,9 +1,7 @@
 // ── TaskFlow Service Worker ──────────────────────────────────────────────────
-// Changer ce numéro à chaque déploiement pour forcer la mise à jour
-const CACHE_VERSION = '2026-06-13-v2';
+const CACHE_VERSION = '2026-06-13-v3';
 const CACHE_NAME    = 'taskflow-' + CACHE_VERSION;
 
-// Seuls les assets statiques lourds sont mis en cache (pas index.html)
 const STATIC_ASSETS = [
   '/taskflow/manifest.json',
   '/taskflow/icons/icon-192.png',
@@ -15,17 +13,22 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
-  self.skipWaiting(); // prend effet immédiatement sans attendre la fermeture des onglets
+  self.skipWaiting();
 });
 
-// Activation : supprime tous les anciens caches
+// Activation : supprime tous les anciens caches et notifie les clients de recharger
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => {
+        // Notifie tous les onglets ouverts qu'une nouvelle version est disponible
+        self.clients.matchAll({ type: 'window' }).then(clients => {
+          clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
+        });
+      })
   );
-  self.clients.claim(); // contrôle immédiat de tous les onglets ouverts
 });
 
 // Fetch
@@ -44,24 +47,22 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // index.html → toujours réseau en priorité (pour recevoir les mises à jour)
-  if (url.pathname === '/taskflow/' || url.pathname === '/taskflow/index.html') {
+  // index.html → toujours réseau (jamais de cache)
+  if (url.pathname === '/taskflow/' || url.pathname === '/taskflow/index.html' || url.pathname.endsWith('/taskflow/')) {
     event.respondWith(
-      fetch(event.request)
-        .then(response => response)
+      fetch(event.request, { cache: 'no-store' })
         .catch(() => caches.match('/taskflow/index.html'))
     );
     return;
   }
 
-  // Icônes et manifest → cache d'abord, réseau en fallback
+  // Icônes et manifest → cache
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
         if (response && response.status === 200 && response.type === 'basic') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
         }
         return response;
       });

@@ -8225,6 +8225,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 const fbDb   = firebase.firestore();
+// Persister la session même après fermeture du navigateur
+fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 let fbAutoSync = true; // toujours actif quand connecté
 let _fbSnapshotUnsub = null; // listener temps réel
 let _fbPushTimeout   = null; // debounce push
