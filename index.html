@@ -1228,6 +1228,12 @@
     .filters-bar    { padding:7px 14px; }
   }
 
+  /* ── 1 colonne dès 900px ── */
+  @media (max-width:900px) {
+    main { grid-template-columns:1fr; }
+    .stats-grid { grid-template-columns:1fr 1fr; }
+  }
+
   /* ══════════════════════════════════════
      MOBILE (≤768px)
   ══════════════════════════════════════ */
@@ -1753,7 +1759,7 @@
 
   <div class="header-actions">
     <span class="sync-indicator" id="sync-dot" style="display:none" title="Sync serveur"></span>
-    <div style="position:relative;display:inline-flex;gap:2px;">
+    <div class="mobile-hide" style="position:relative;display:inline-flex;gap:2px;">
       <button class="btn-icon" id="btn-undo-global" onclick="undoLastAction()"
         style="opacity:.35;pointer-events:none;border-radius:7px 0 0 7px;border-right:none;"
         title="Rien à annuler" disabled>↩ Annuler</button>
