@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TaskFlow — Matrice d'Eisenhower</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#161b22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TaskFlow">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <style>
   :root {
     --bg:       #0d1117;
@@ -15,6 +22,7 @@
     --text2:    #8b949e;
     --text3:    #484f58;
     --accent:   #58a6ff;
+    --on-accent:#0d1117;
     --gold:     #ffd700;
 
     --q1-color: #f85149;
@@ -24,6 +32,46 @@
 
     --radius:   10px;
     --trans:    .18s ease;
+  }
+
+  /* ══ THÈME CLAIR ÉPURÉ ══ */
+  body.theme-light {
+    --bg:       #f6f8fa;
+    --bg2:      #ffffff;
+    --bg3:      #f6f8fa;
+    --bg4:      #eaeef2;
+    --border:   #d0d7de;
+    --text:     #1f2328;
+    --text2:    #57606a;
+    --text3:    #8c959f;
+    --accent:   #0969da;
+    --on-accent:#ffffff;
+    --gold:     #9a6700;
+
+    --q1-color: #cf222e;
+    --q2-color: #1a7f37;
+    --q3-color: #9a6700;
+    --q4-color: #6e7781;
+  }
+
+  /* ══ THÈME NUIT VIOLETTE ══ */
+  body.theme-violet {
+    --bg:       #13111c;
+    --bg2:      #1c1827;
+    --bg3:      #262033;
+    --bg4:      #322a44;
+    --border:   #2b2640;
+    --text:     #e5e1f5;
+    --text2:    #9d93bd;
+    --text3:    #5e5680;
+    --accent:   #a78bfa;
+    --on-accent:#1d1530;
+    --gold:     #fbbf24;
+
+    --q1-color: #f472b6;
+    --q2-color: #34d399;
+    --q3-color: #fbbf24;
+    --q4-color: #8b86a3;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -106,7 +154,7 @@
   }
   select:focus { border-color:var(--accent); }
   .btn-add {
-    background:var(--accent); color:#0d1117; border:none; border-radius:var(--radius);
+    background:var(--accent); color:var(--on-accent); border:none; border-radius:var(--radius);
     padding:8px 18px; font-size:.85rem; font-weight:700; cursor:pointer; transition:var(--trans);
   }
   .btn-add:hover { background:#79c0ff; transform:translateY(-1px); }
@@ -117,15 +165,25 @@
     background:var(--bg3); border:1px solid var(--border); border-radius:20px;
     padding:3px 11px; font-size:.75rem; cursor:pointer; color:var(--text2); transition:var(--trans);
   }
-  .filter-chip.active { background:var(--accent); color:#0d1117; border-color:var(--accent); font-weight:700; }
+  .filter-chip.active { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:700; }
   .filter-chip:hover:not(.active) { border-color:var(--accent); color:var(--text); }
   .search-filter {
-    margin-left:auto; background:var(--bg3); border:1px solid var(--border);
-    border-radius:20px; padding:4px 13px; font-size:.75rem; color:var(--text);
-    outline:none; width:170px; transition:var(--trans);
+    background:var(--bg3); border:1px solid #444c56;
+    border-radius:20px; padding:5px 14px 5px 34px; font-size:.78rem; color:var(--text);
+    outline:none; width:170px; transition:width .25s, border-color .18s, box-shadow .18s;
   }
-  .search-filter:focus { border-color:var(--accent); width:230px; }
+  .search-filter:focus { border-color:var(--accent); width:230px; box-shadow:0 0 0 2px rgba(88,166,255,.18); }
   .search-filter::placeholder { color:var(--text3); }
+  .search-wrap { position:relative; display:flex; align-items:center; }
+  .search-wrap::before {
+    content:'';
+    position:absolute; left:10px;
+    width:14px; height:14px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:center; background-size:contain;
+    pointer-events:none; opacity:.9;
+  }
+  .search-wrap:focus-within::before { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2358a6ff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E"); opacity:1; }
 
   /* ══════════ STATS STRIP ══════════ */
   .stats-grid {
@@ -150,15 +208,16 @@
     background:var(--bg2); border:1px solid var(--border);
     border-radius:14px; overflow:hidden;
     display:flex; flex-direction:column;
-    height: 380px;
+    height: 252px;
     transition: height .25s ease, box-shadow var(--trans);
   }
-  /* Hauteur ajustable via data-size */
-  .quadrant[data-size="1"] { height: 180px; }
-  .quadrant[data-size="2"] { height: 280px; }
-  .quadrant[data-size="3"] { height: 380px; }
-  .quadrant[data-size="4"] { height: 520px; }
-  .quadrant[data-size="5"] { height: 700px; }
+  /* Toutes les matrices ont la même hauteur (≈ 2 tâches visibles, le reste défile)
+     — les data-size sont neutralisés pour garantir l'alignement */
+  .quadrant[data-size="1"],
+  .quadrant[data-size="2"],
+  .quadrant[data-size="3"],
+  .quadrant[data-size="4"],
+  .quadrant[data-size="5"] { height: 252px; }
   /* Réduit : seulement l'entête visible */
   .quadrant.q-collapsed { height: auto !important; }
   .quadrant.q-collapsed .q-body { display: none; }
@@ -172,25 +231,26 @@
   .q3 { border-top:3px solid var(--q3-color); } .q3 .q-progress-fill { background:var(--q3-color); }
   .q4 { border-top:3px solid var(--q4-color); } .q4 .q-progress-fill { background:var(--q4-color); }
   .quadrant-header {
-    padding:12px 14px; border-bottom:1px solid var(--border);
+    padding:0 14px; border-bottom:1px solid var(--border);
     display:flex; align-items:center; gap:9px;
+    flex-wrap:nowrap; height:46px; min-height:46px; overflow:visible;
   }
   .q-badge { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
   .q1 .q-badge { background:var(--q1-color); box-shadow:0 0 6px var(--q1-color); }
   .q2 .q-badge { background:var(--q2-color); box-shadow:0 0 6px var(--q2-color); }
   .q3 .q-badge { background:var(--q3-color); box-shadow:0 0 6px var(--q3-color); }
   .q4 .q-badge { background:var(--q4-color); }
-  .q-title { font-weight:700; font-size:.9rem; }
+  .q-title { font-weight:700; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .q1 .q-title { color:var(--q1-color); } .q2 .q-title { color:var(--q2-color); }
   .q3 .q-title { color:var(--q3-color); } .q4 .q-title { color:var(--q4-color); }
-  .q-subtitle { font-size:.68rem; color:var(--text3); margin-top:1px; }
+  .q-subtitle { font-size:.68rem; color:var(--text3); margin-top:0; white-space:nowrap; overflow:hidden; }
   .q1 .q-subtitle::before { content:"⚡ Faire maintenant"; }
   .q2 .q-subtitle::before { content:"📅 Planifier"; }
   .q3 .q-subtitle::before { content:"🤝 Déléguer"; }
   .q4 .q-subtitle::before { content:"🗑️ Éliminer"; }
 
   /* ── Tooltip sur titre de quadrant ── */
-  .q-title-wrap { position:relative; cursor:default; }
+  .q-title-wrap { position:relative; cursor:default; display:flex; align-items:baseline; gap:7px; flex:1; min-width:0; }
   .q-tooltip {
     display: none;
     position: absolute;
@@ -233,9 +293,25 @@
     margin-left:auto; background:var(--bg3); border:1px solid var(--border);
     border-radius:12px; padding:2px 8px; font-size:.72rem; font-weight:700; color:var(--text2);
   }
-  .q-body { padding:8px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:7px; min-height:0; }
-  .q-body::-webkit-scrollbar { width:4px; }
-  .q-body::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+  .q-body-wrap { flex:1; display:flex; flex-direction:column; min-height:0; position:relative; }
+  .q-body { padding:8px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:7px; min-height:0;
+    scrollbar-width: none; }
+  .q-body::-webkit-scrollbar { display:none; }
+  /* Flèches de défilement */
+  .q-scroll-btn {
+    position:absolute; right:6px; z-index:10;
+    width:22px; height:22px; border-radius:50%;
+    background:var(--bg4); border:1px solid var(--border);
+    color:var(--text2); font-size:.6rem; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:var(--trans); pointer-events:none;
+    box-shadow:0 2px 6px rgba(0,0,0,.3);
+  }
+  .q-body-wrap:hover .q-scroll-btn { opacity:1; pointer-events:auto; }
+  .q-scroll-btn:hover { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+  .q-scroll-btn.q-scroll-up   { top:4px; }
+  .q-scroll-btn.q-scroll-down { bottom:4px; }
+  .q-scroll-btn.q-scroll-hidden { opacity:0 !important; pointer-events:none !important; }
   .q-empty {
     flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:5px; color:var(--text3); font-size:.78rem; padding:20px; text-align:center;
@@ -292,10 +368,14 @@
   .sn-bullet:hover { border-color:var(--q2-color); }
   .subnote-item.sn-done .sn-bullet { background:var(--q2-color); border-color:var(--q2-color); color:#000; }
   .subnote-text { flex:1; font-size:.75rem; color:var(--text2); line-height:1.4; word-break:break-word; }
-  .sn-del { background:none; border:none; color:var(--text3); font-size:.65rem; cursor:pointer;
-    padding:0 2px; opacity:0; transition:var(--trans); flex-shrink:0; }
-  .subnote-item:hover .sn-del { opacity:1; }
-  .sn-del:hover { color:var(--q1-color); }
+  .sn-del, .sn-edit { background:none; border:none; color:var(--text3); font-size:.65rem; cursor:pointer;
+    padding:0 2px; opacity:0.35; transition:var(--trans); flex-shrink:0; }
+  .subnote-item:hover .sn-del,
+  .subnote-item:hover .sn-edit { opacity:1; }
+  .sn-del:hover  { color:var(--q1-color); }
+  .sn-edit:hover { color:var(--accent); }
+  .sn-edit-input { flex:1; font-size:.75rem; background:var(--bg3); border:1px solid var(--accent);
+    border-radius:4px; padding:2px 6px; color:var(--text); outline:none; }
   .ti-subnotes-list { display:flex; flex-direction:column; gap:4px; margin:5px 0 3px 27px; }
   .ti-subnote-add-form { display:none; gap:5px; margin:4px 0 2px 27px; align-items:center; }
   .ti-subnote-add-form.open { display:flex; }
@@ -490,6 +570,111 @@
     margin-left: 4px;
     opacity: .7;
   }
+
+  /* ══ VUE FOCUS (onglet dédié) ══ */
+  .nav-tab.focus-tab.active { color: var(--gold); }
+  .nav-tab.focus-tab.active .nav-tab-badge { background: rgba(255,215,0,.12); color: var(--gold); border-color: rgba(255,215,0,.3); }
+  .focus-view { max-width: 780px; margin: 0 auto; padding: 28px 20px 60px; }
+  .focus-view-header { display:flex; align-items:center; gap:12px; margin-bottom:6px; flex-wrap:wrap; }
+  .focus-view-title { font-size:1.25rem; font-weight:800; display:flex; align-items:center; gap:10px; }
+  .focus-view-sub { font-size:.78rem; color:var(--text3); margin-bottom:18px; }
+  .focus-item {
+    background: var(--bg2); border: 1px solid rgba(255,215,0,.25);
+    border-left: 4px solid var(--gold); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 12px;
+    transition: all .2s;
+  }
+  .focus-item:hover { border-color: rgba(255,215,0,.45); box-shadow: 0 4px 18px rgba(0,0,0,.25); }
+  .focus-item.fi-done { opacity:.55; border-left-color: var(--q2-color); }
+  .focus-item-top { display:flex; align-items:center; gap:12px; }
+  .fi-check {
+    width: 26px; height: 26px; min-width: 26px; border-radius: 50%;
+    border: 2px solid var(--gold); display:flex; align-items:center; justify-content:center;
+    cursor: pointer; font-size: .85rem; color: var(--q2-color); transition: all .15s;
+  }
+  .fi-check:hover { transform: scale(1.12); }
+  .focus-item.fi-done .fi-check { border-color: var(--q2-color); background: rgba(63,185,80,.15); }
+  .fi-title { font-size: 1.05rem; font-weight: 700; flex: 1; line-height: 1.35; }
+  .focus-item.fi-done .fi-title { text-decoration: line-through; color: var(--text3); }
+  .fi-origin { font-size:.68rem; color:var(--text3); background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:2px 8px; white-space:nowrap; }
+  .fi-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .fi-btn {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
+    border-radius: 7px; padding: 4px 11px; font-size: .73rem; cursor: pointer; transition: all .15s;
+  }
+  .fi-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .fi-btn.fi-return:hover { border-color: var(--q2-color); color: var(--q2-color); }
+  .focus-empty-state { text-align:center; padding:70px 20px; color:var(--text3); }
+  .focus-btn-card { color: var(--gold) !important; border-color: rgba(255,215,0,.3) !important; }
+  .focus-btn-card:hover { background: rgba(255,215,0,.08) !important; }
+
+  /* ══ MODE FOCUS ══ */
+  .today-item.ti-focus {
+    border-left-color: var(--gold);
+    background: linear-gradient(135deg, rgba(255,215,0,.10) 0%, var(--bg3) 100%);
+    /* Pas de box-shadow externe, pas de transform, pas de changement de taille */
+  }
+  .today-item.ti-focus .ti-title {
+    font-weight: 700;
+    color: var(--text);
+    /* Pas de font-size : aucun décalage de layout */
+  }
+  .today-item.ti-focus .ti-check {
+    border-color: var(--gold);
+  }
+  .today-item.ti-focus .ti-focus-btn { color: var(--gold); opacity: 1; }
+
+  .today-item.ti-dimmed {
+    opacity: .35;
+    filter: saturate(.3);
+    pointer-events: auto;
+    /* Pas de transform : évite tout décalage visuel */
+  }
+  .today-item.ti-dimmed .ti-title { color: var(--text3); }
+  .today-item.ti-dimmed:hover { opacity: .65; filter: saturate(.7); }
+
+  .ti-focus-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: .9rem; padding: 0 3px;
+    opacity: 0; transition: var(--trans); flex-shrink: 0;
+    color: var(--text3); line-height: 1;
+  }
+  .today-item:hover .ti-focus-btn { opacity: .65; }
+  .ti-focus-btn:hover { opacity: 1 !important; transform: scale(1.2); }
+
+  /* Bouton Focus dans la barre d'actions */
+  .ti-focus-action-btn {
+    background: none;
+    border: 1px solid rgba(255,215,0,.3);
+    color: var(--text3);
+    border-radius: 6px; padding: 3px 9px;
+    font-size: .72rem; cursor: pointer;
+    transition: var(--trans); flex-shrink: 0;
+  }
+  .ti-focus-action-btn:hover { border-color: var(--gold); color: var(--gold); background: rgba(255,215,0,.08); }
+  .ti-focus-action-btn.active {
+    background: rgba(255,215,0,.15);
+    border-color: rgba(255,215,0,.7);
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  .focus-bar {
+    display: none; align-items: center; gap: 8px;
+    padding: 6px 14px; margin: 0 0 6px;
+    background: rgba(255,215,0,.08);
+    border: 1px solid rgba(255,215,0,.3);
+    border-radius: 8px; font-size: .78rem; color: var(--gold);
+  }
+  .focus-bar.visible { display: flex; }
+  .focus-bar-dots { display:flex; gap:5px; }
+  .focus-dot { width:10px; height:10px; border-radius:50%;
+    border:1.5px solid rgba(255,215,0,.5); background:transparent; transition:var(--trans); }
+  .focus-dot.filled { background:var(--gold); border-color:var(--gold); }
+  .focus-bar-clear { margin-left:auto; background:none; border:none;
+    color:var(--text3); font-size:.75rem; cursor:pointer; padding:2px 6px;
+    border-radius:5px; transition:var(--trans); }
+  .focus-bar-clear:hover { color:var(--q1-color); background:rgba(248,81,73,.1); }
 
   .ti-actions { display:flex; gap:6px; align-items:center; padding-left:27px; flex-wrap:wrap; }
   .ti-reclassify {
@@ -765,9 +950,9 @@
   .status-badges { display:flex; gap:7px; flex-wrap:wrap; }
   .status-badge { border:2px solid var(--border); background:var(--bg3); border-radius:8px; padding:5px 12px; font-size:.78rem; cursor:pointer; color:var(--text2); transition:var(--trans); font-weight:500; }
   .status-badge:hover { border-color:var(--accent); color:var(--text); }
-  .status-badge.selected { background:var(--accent); border-color:var(--accent); color:#0d1117; }
+  .status-badge.selected { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
   .modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
-  .btn-save { background:var(--accent); color:#0d1117; border:none; border-radius:var(--radius); padding:8px 20px; font-size:.85rem; font-weight:700; cursor:pointer; transition:var(--trans); }
+  .btn-save { background:var(--accent); color:var(--on-accent); border:none; border-radius:var(--radius); padding:8px 20px; font-size:.85rem; font-weight:700; cursor:pointer; transition:var(--trans); }
   .btn-save:hover { background:#79c0ff; }
   .btn-cancel { background:var(--bg3); border:1px solid var(--border); color:var(--text2); border-radius:var(--radius); padding:8px 14px; font-size:.85rem; cursor:pointer; transition:var(--trans); }
   .btn-cancel:hover { background:var(--bg4); color:var(--text); }
@@ -887,6 +1072,55 @@
   .toast { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:9px 15px; font-size:.8rem; color:var(--text); display:flex; align-items:center; gap:7px; box-shadow:0 8px 24px rgba(0,0,0,.4); animation:toastIn .22s ease; max-width:320px; }
   @keyframes toastIn { from{opacity:0;transform:translateX(18px)} to{opacity:1;transform:translateX(0)} }
   .toast.success { border-color:var(--q2-color); }
+
+  /* ══ TICKER GAUCHE — quotidiens & idées ══ */
+  #left-ticker {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 152px;
+    z-index: 40;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .ticker-card {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    padding: 10px 12px 10px 10px;
+    background: rgba(13,17,23,.82);
+    border-right: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    backdrop-filter: blur(6px);
+    pointer-events: none;
+    will-change: transform;
+    max-width: 148px;
+    box-sizing: border-box;
+  }
+  .ticker-card.tc-idea  { border-right-color: #0ea5e9; }
+  .ticker-card.tc-morning { border-right-color: var(--gold); }
+  .ticker-card-icon { font-size: .9rem; display: block; margin-bottom: 4px; }
+  .ticker-card-text {
+    font-size: .72rem;
+    color: var(--text);
+    line-height: 1.45;
+    word-break: break-word;
+    font-weight: 500;
+  }
+  .ticker-card-type {
+    font-size: .6rem;
+    color: var(--text3);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  @keyframes tickerRise {
+    from { transform: translateY(calc(100vh + 120px)); opacity: 0; }
+    8%   { opacity: 1; }
+    88%  { opacity: 1; }
+    to   { transform: translateY(calc(-100vh - 120px)); opacity: 0; }
+  }
   .toast.error   { border-color:var(--q1-color); }
   .toast.info    { border-color:var(--accent); }
   .toast.gold    { border-color:var(--gold); }
@@ -973,6 +1207,7 @@
   /* Confetti */
   .confetti-piece { position:fixed; pointer-events:none; z-index:999; animation:confettiFall linear forwards; border-radius:2px; }
   @keyframes confettiFall { 0%{transform:translateY(-20px) rotate(0);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+  @keyframes urgency-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.75;transform:scale(1.06)} }
 
   /* Responsive */
   @media (max-width:900px) {
@@ -1009,7 +1244,7 @@
   .q-inline-input:focus { border-color: var(--accent); }
   .q-inline-btn {
     background: var(--accent);
-    color: #0d1117;
+    color: var(--on-accent);
     border: none;
     border-radius: 7px;
     padding: 5px 12px;
@@ -1028,7 +1263,7 @@
   .q-add-btn { color: var(--accent) !important; }
 
   /* ══════════ FEATURE 2: CSS resize ══════════ */
-  .quadrant:not(.q-collapsed) { resize: vertical; }
+  /* resize manuel désactivé — toutes les matrices gardent la même hauteur */
 
   /* ══════════ FEATURE 3: Drag-reorder indicators ══════════ */
   .task-card.drop-above { box-shadow: 0 -3px 0 var(--accent); }
@@ -1305,11 +1540,7 @@
         if (ids[q]) css += '#' + ids[q] + '{order:' + i + '}';
       });
     }
-    if (sizes) {
-      ['q1','q2','q3','q4'].forEach(function(q) {
-        if (sizes[q]) css += '#quad-' + q + '{height:' + ({1:180,2:280,3:380,4:520,5:700}[sizes[q]]||380) + 'px}';
-      });
-    }
+    /* Hauteurs individuelles désactivées — toutes les matrices ont la même hauteur (252px) */
     if (coll) {
       ['q1','q2','q3','q4'].forEach(function(q) {
         if (coll[q]) css += '#quad-' + q + '{height:auto!important}';
@@ -1327,6 +1558,10 @@
 </script>
 </head>
 <body>
+<script>(function(){try{var t=localStorage.getItem('taskflow_theme')||'violet';if(t==='light')document.body.classList.add('theme-light');else if(t==='violet')document.body.classList.add('theme-violet');}catch(e){}})();</script>
+
+<!-- ═══ TICKER GAUCHE ═══ -->
+<div id="left-ticker"></div>
 
 <!-- ═══════════ HEADER ═══════════ -->
 <header>
@@ -1341,6 +1576,10 @@
       ☀️ Aujourd'hui
       <span class="nav-tab-badge" id="tab-badge-today">0</span>
     </button>
+    <button class="nav-tab focus-tab" id="tab-focus" onclick="switchView('focus')">
+      🎯 Focus
+      <span class="nav-tab-badge" id="tab-badge-focus">0</span>
+    </button>
     <button class="nav-tab" id="tab-notes" onclick="switchView('notes')">
       📓 Notes
       <span class="nav-tab-badge" id="tab-badge-notes">0</span>
@@ -1348,7 +1587,7 @@
   </div>
 
   <div class="header-actions">
-    <span class="sync-indicator" id="sync-dot" style="display:none"></span>
+    <span class="sync-indicator" id="sync-dot" style="display:none" title="Sync serveur"></span>
     <div style="position:relative;display:inline-flex;gap:2px;">
       <button class="btn-icon" id="btn-undo-global" onclick="undoLastAction()"
         style="opacity:.35;pointer-events:none;border-radius:7px 0 0 7px;border-right:none;"
@@ -1371,6 +1610,7 @@
         <div id="undo-history-list"></div>
       </div>
     </div>
+    <button class="btn-icon" id="btn-theme" onclick="toggleTheme()" title="Basculer thème clair / sombre">🌙 Sombre</button>
     <button class="btn-icon" onclick="openArchive()">📦 Archive</button>
     <button class="btn-icon" onclick="shareByEmail()">📧 Email</button>
     <button class="btn-icon" onclick="saveToServer('manual')">💾 Sauvegarder</button>
@@ -1378,6 +1618,9 @@
     <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 GitHub</button>
     <button class="btn-icon" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
     <button class="btn-icon" onclick="clearDone()">🧹 Nettoyer</button>
+    <div class="search-wrap">
+      <input class="search-filter" type="text" id="search-input" placeholder="Rechercher…" oninput="renderAll()" />
+    </div>
     <button class="btn-login" id="btn-login-header" onclick="openLoginModal()">
       <div class="avatar-bubble" id="login-avatar">👤</div>
       <span id="login-label">Connexion</span>
@@ -1425,26 +1668,34 @@
     <button class="filter-chip"        data-filter="perso"   onclick="setFilter('perso',this)">🏠 Perso</button>
     <button class="filter-chip"        data-filter="sante"   onclick="setFilter('sante',this)">❤️ Santé</button>
     <button class="filter-chip"        data-filter="finance" onclick="setFilter('finance',this)">💰 Finance</button>
-    <input class="search-filter" type="text" id="search-input" placeholder="🔍 Rechercher…" oninput="renderAll()">
     <button class="btn-mark-all-seen" onclick="markAllSeenToday()" title="Marquer toutes les notes comme vues aujourd'hui">👁 Tout marquer vu</button>
+    <button class="filter-chip" onclick="openDuplicatesModal()" title="Détecter et fusionner les tâches en double" style="border-color:#a78bfa;color:#a78bfa;">🔀 Doublons</button>
     <button class="filter-chip" id="matrix-select-btn" onclick="toggleMatrixSelectMode()" style="margin-left:auto;border-color:var(--accent);color:var(--accent);">☑ Sélectionner</button>
   </div>
 
   <!-- Multi-select action bar (matrix) -->
   <div id="matrix-bulk-bar" style="display:none;position:sticky;bottom:0;z-index:90;
-    background:var(--bg2);border-top:2px solid var(--accent);padding:10px 20px;
-    display:none;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span id="matrix-bulk-count" style="font-size:.82rem;font-weight:700;color:var(--accent);min-width:80px;">0 sélectionnée(s)</span>
-    <span style="font-size:.72rem;color:var(--text3);">Déplacer vers :</span>
-    <button class="mbulk-btn" onclick="bulkMoveMatrix('q1')" style="border-color:var(--q1-color);color:var(--q1-color)">⚡ Q1</button>
-    <button class="mbulk-btn" onclick="bulkMoveMatrix('q2')" style="border-color:var(--q2-color);color:var(--q2-color)">📅 Q2</button>
-    <button class="mbulk-btn" onclick="bulkMoveMatrix('q3')" style="border-color:var(--q3-color);color:var(--q3-color)">🤝 Q3</button>
-    <button class="mbulk-btn" onclick="bulkMoveMatrix('q4')" style="border-color:var(--q4-color);color:var(--q4-color)">🗑 Q4</button>
-    <span style="width:1px;height:22px;background:var(--border);flex-shrink:0;"></span>
-    <button class="mbulk-btn" onclick="bulkSendToToday()" style="border-color:var(--gold);color:var(--gold)">☀️ Aujourd'hui</button>
-    <button class="mbulk-btn" onclick="bulkArchiveMatrix()" style="border-color:var(--text3);color:var(--text2)">🗃 Archiver</button>
-    <button class="mbulk-btn" onclick="bulkDeleteMatrix()" style="border-color:rgba(248,81,73,.5);color:var(--q1-color)">🗑 Supprimer</button>
-    <button class="mbulk-btn" onclick="toggleMatrixSelectMode()" style="margin-left:auto;background:var(--bg3);">✕ Annuler</button>
+    background:var(--bg2);border-top:2px solid var(--accent);padding:8px 12px;
+    display:none;flex-direction:column;gap:6px;">
+    <!-- Ligne 1 : compteur + annuler -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span id="matrix-bulk-count" style="font-size:.82rem;font-weight:700;color:var(--accent);">0 sélectionnée(s)</span>
+      <button class="mbulk-btn" onclick="toggleMatrixSelectMode()" style="background:var(--bg3);border-color:var(--border);">✕ Annuler</button>
+    </div>
+    <!-- Ligne 2 : boutons de déplacement scrollables -->
+    <div style="display:flex;align-items:center;gap:8px;overflow-x:auto;padding-bottom:2px;
+      scrollbar-width:thin;scrollbar-color:var(--border) transparent;">
+      <span style="font-size:.72rem;color:var(--text3);white-space:nowrap;flex-shrink:0;">Déplacer :</span>
+      <button class="mbulk-btn" onclick="bulkMoveMatrix('q1')" style="flex-shrink:0;border-color:var(--q1-color);color:var(--q1-color)">⚡ Q1</button>
+      <button class="mbulk-btn" onclick="bulkMoveMatrix('q2')" style="flex-shrink:0;border-color:var(--q2-color);color:var(--q2-color)">📅 Q2</button>
+      <button class="mbulk-btn" onclick="bulkMoveMatrix('q3')" style="flex-shrink:0;border-color:var(--q3-color);color:var(--q3-color)">🤝 Q3</button>
+      <button class="mbulk-btn" onclick="bulkMoveMatrix('q4')" style="flex-shrink:0;border-color:var(--q4-color);color:var(--q4-color)">🗑 Q4</button>
+      <div id="bulk-custom-quads" style="display:contents"></div>
+      <span style="width:1px;height:22px;background:var(--border);flex-shrink:0;"></span>
+      <button class="mbulk-btn" onclick="bulkSendToToday()" style="flex-shrink:0;border-color:var(--gold);color:var(--gold)">☀️ Aujourd'hui</button>
+      <button class="mbulk-btn" onclick="bulkArchiveMatrix()" style="flex-shrink:0;border-color:var(--text3);color:var(--text2)">🗃 Archiver</button>
+      <button class="mbulk-btn" onclick="bulkDeleteMatrix()" style="flex-shrink:0;border-color:rgba(248,81,73,.5);color:var(--q1-color)">🗑 Supprimer</button>
+    </div>
   </div>
 
   <!-- Stats -->
@@ -1488,7 +1739,11 @@
         <button class="q-inline-btn" onclick="submitQuadAdd('q1')">＋ OK</button>
         <button class="q-inline-close" onclick="closeQuadAdd('q1')">✕</button>
       </div>
-      <div class="q-body" id="body-q1"></div>
+      <div class="q-body-wrap">
+        <button class="q-scroll-btn q-scroll-up q-scroll-hidden" id="qsu-q1" onclick="qScroll('q1',-1)">▲</button>
+        <div class="q-body" id="body-q1" onscroll="qScrollUpdate('q1')"></div>
+        <button class="q-scroll-btn q-scroll-down q-scroll-hidden" id="qsd-q1" onclick="qScroll('q1',1)">▼</button>
+      </div>
     </div>
     <div class="quadrant q2" id="quad-q2" ondragover="onDragOver(event,'q2')" ondragleave="onDragLeave(event,'q2')" ondrop="onDrop(event,'q2')">
       <div class="q-progress"><div class="q-progress-fill" id="prog-q2"></div></div>
@@ -1526,7 +1781,11 @@
         <button class="q-inline-btn" onclick="submitQuadAdd('q2')">＋ OK</button>
         <button class="q-inline-close" onclick="closeQuadAdd('q2')">✕</button>
       </div>
-      <div class="q-body" id="body-q2"></div>
+      <div class="q-body-wrap">
+        <button class="q-scroll-btn q-scroll-up q-scroll-hidden" id="qsu-q2" onclick="qScroll('q2',-1)">▲</button>
+        <div class="q-body" id="body-q2" onscroll="qScrollUpdate('q2')"></div>
+        <button class="q-scroll-btn q-scroll-down q-scroll-hidden" id="qsd-q2" onclick="qScroll('q2',1)">▼</button>
+      </div>
     </div>
     <div class="quadrant q3" id="quad-q3" ondragover="onDragOver(event,'q3')" ondragleave="onDragLeave(event,'q3')" ondrop="onDrop(event,'q3')">
       <div class="q-progress"><div class="q-progress-fill" id="prog-q3"></div></div>
@@ -1564,7 +1823,11 @@
         <button class="q-inline-btn" onclick="submitQuadAdd('q3')">＋ OK</button>
         <button class="q-inline-close" onclick="closeQuadAdd('q3')">✕</button>
       </div>
-      <div class="q-body" id="body-q3"></div>
+      <div class="q-body-wrap">
+        <button class="q-scroll-btn q-scroll-up q-scroll-hidden" id="qsu-q3" onclick="qScroll('q3',-1)">▲</button>
+        <div class="q-body" id="body-q3" onscroll="qScrollUpdate('q3')"></div>
+        <button class="q-scroll-btn q-scroll-down q-scroll-hidden" id="qsd-q3" onclick="qScroll('q3',1)">▼</button>
+      </div>
     </div>
     <div class="quadrant q4" id="quad-q4" ondragover="onDragOver(event,'q4')" ondragleave="onDragLeave(event,'q4')" ondrop="onDrop(event,'q4')">
       <div class="q-progress"><div class="q-progress-fill" id="prog-q4"></div></div>
@@ -1602,7 +1865,11 @@
         <button class="q-inline-btn" onclick="submitQuadAdd('q4')">＋ OK</button>
         <button class="q-inline-close" onclick="closeQuadAdd('q4')">✕</button>
       </div>
-      <div class="q-body" id="body-q4"></div>
+      <div class="q-body-wrap">
+        <button class="q-scroll-btn q-scroll-up q-scroll-hidden" id="qsu-q4" onclick="qScroll('q4',-1)">▲</button>
+        <div class="q-body" id="body-q4" onscroll="qScrollUpdate('q4')"></div>
+        <button class="q-scroll-btn q-scroll-down q-scroll-hidden" id="qsd-q4" onclick="qScroll('q4',1)">▼</button>
+      </div>
     </div>
 
     <!-- ═══ SNOOZE SECTION — Archivé 1 semaine ═══ -->
@@ -1674,7 +1941,19 @@
         <button class="sort-chip"        id="sort-chip-recent"   onclick="setTodaySort('recent')">🕐 Récent</button>
         <button class="sort-chip"        id="sort-chip-alpha"    onclick="setTodaySort('alpha')">🔤 A–Z</button>
         <button class="sort-chip" id="sort-chip-done-clean" onclick="clearDoneTodayTasks()" title="Supprimer toutes les tâches terminées" style="color:var(--q2-color);">✓ Vider terminées</button>
-        <button class="sort-chip" id="sort-chip-select" onclick="toggleSelectMode()" style="margin-left:auto;">☑ Sélectionner</button>
+        <button class="sort-chip" id="today-urgency-btn" onclick="cycleTodayUrgency()" title="Niveau d'urgence de la journée — cliquer pour changer" style="margin-left:auto;font-weight:700;transition:all .2s;">🟢 Calme</button>
+        <button class="sort-chip" id="sort-chip-select" onclick="toggleSelectMode()">☑ Sélectionner</button>
+      </div>
+      <!-- Barre focus -->
+      <div class="focus-bar" id="focus-bar">
+        <span>🎯 Focus :</span>
+        <div class="focus-bar-dots">
+          <div class="focus-dot" id="focus-dot-0"></div>
+          <div class="focus-dot" id="focus-dot-1"></div>
+          <div class="focus-dot" id="focus-dot-2"></div>
+        </div>
+        <span id="focus-bar-label" style="color:var(--text2);"></span>
+        <button class="focus-bar-clear" onclick="clearFocus()">✕ Effacer focus</button>
       </div>
       <div class="today-list-body" id="today-list-body"></div>
       <div class="today-bulk-bar" id="today-bulk-bar">
@@ -1688,6 +1967,26 @@
 
   </div>
 </div><!-- /view-today -->
+
+<!-- ═══════════ VIEW FOCUS ═══════════ -->
+<div class="view" id="view-focus">
+  <div class="focus-view">
+    <div class="focus-view-header">
+      <div class="focus-view-title">🎯 Focus <span class="nav-tab-badge" id="focus-count-label" style="font-size:.75rem;">0</span></div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn-icon" onclick="openFocusPostit()" title="Afficher les tâches focus dans un post-it flottant à droite de l'écran" style="font-size:.72rem;padding:3px 9px;color:var(--gold);border-color:rgba(255,215,0,.35);">📌 Post-it</button>
+        <button class="btn-icon" onclick="returnAllFromFocus()" title="Renvoyer toutes les tâches vers leur origine" style="font-size:.72rem;padding:3px 9px;color:var(--q2-color);border-color:rgba(63,185,80,.3);">↩ Tout renvoyer</button>
+      </div>
+    </div>
+    <div class="focus-view-sub">Vos tâches prioritaires du moment — déplacez-les ici depuis la Matrice ou Aujourd'hui pour vous concentrer dessus.</div>
+    <div id="focus-list-body"></div>
+    <div class="focus-empty-state" id="focus-empty" style="display:none;">
+      <div style="font-size:2.5rem;margin-bottom:12px;">🎯</div>
+      <div style="font-size:.9rem;">Aucune tâche en focus</div>
+      <div style="font-size:.75rem;margin-top:6px;">Utilisez le bouton "🎯 Focus" sur une tâche de la Matrice ou d'Aujourd'hui</div>
+    </div>
+  </div>
+</div><!-- /view-focus -->
 
 <!-- ═══════════ VIEW NOTES ═══════════ -->
 <div class="view" id="view-notes">
@@ -1797,12 +2096,14 @@
 
 <!-- Move modal -->
 <div class="modal-overlay" id="move-modal">
-  <div class="modal" style="max-width:370px;">
-    <div class="modal-header">
+  <div class="modal" style="max-width:370px;display:flex;flex-direction:column;max-height:85vh;">
+    <div class="modal-header" style="flex-shrink:0;">
       <div class="modal-title">Déplacer vers…</div>
       <button class="modal-close" onclick="closeMoveModal()">✕</button>
     </div>
-    <div class="modal-body"><div class="move-options" id="move-options"></div></div>
+    <div class="modal-body" style="overflow-y:auto;flex:1;padding:14px;">
+      <div class="move-options" id="move-options"></div>
+    </div>
   </div>
 </div>
 
@@ -1971,7 +2272,7 @@ const QUAD_ORDER_KEY     = 'taskflow_quadorder';
 const QUAD_SIZE_KEY      = 'taskflow_quadsize';
 const QUAD_COLLAPSE_KEY  = 'taskflow_quadcollapse';
 let quadOrder     = JSON.parse(localStorage.getItem(QUAD_ORDER_KEY)    || 'null') || ['q1','q2','q3','q4','snooze'];
-let quadSizes     = JSON.parse(localStorage.getItem(QUAD_SIZE_KEY)     || 'null') || {q1:3,q2:3,q3:3,q4:3,snooze:3};
+let quadSizes     = JSON.parse(localStorage.getItem(QUAD_SIZE_KEY)     || 'null') || {q1:1,q2:1,q3:1,q4:1,snooze:3};
 let quadCollapsed = JSON.parse(localStorage.getItem(QUAD_COLLAPSE_KEY) || 'null') || {q1:false,q2:false,q3:false,q4:false,snooze:false};
 
 // Ensure 'snooze' is in quadOrder (migration from old saves without it)
@@ -2016,13 +2317,101 @@ function load() {
   try { tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch(e) { tasks = []; }
 }
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); scheduleServerPush(); fbSyncOnSave(); }
 
 function loadToday() {
   try { todayTasks = JSON.parse(localStorage.getItem(TODAY_KEY)) || []; }
   catch(e) { todayTasks = []; }
 }
-function saveToday() { localStorage.setItem(TODAY_KEY, JSON.stringify(todayTasks)); }
+function saveToday() { localStorage.setItem(TODAY_KEY, JSON.stringify(todayTasks)); scheduleServerPush(); }
+
+// ═══════════════════════════════════════════════
+//  SYNC SERVEUR LOCAL (accès multi-appareils)
+// ═══════════════════════════════════════════════
+const SERVER_SYNC_URL  = 'api/sync.php';
+const SERVER_TS_KEY    = 'taskflow_server_ts';
+let   _serverPushTimer = null;
+
+function setSyncDotLocal(state) { // 'ok' | 'err' | 'push' | ''
+  const dot = document.getElementById('sync-dot');
+  if (!dot) return;
+  dot.style.display = state ? 'inline-block' : 'none';
+  dot.className = 'sync-indicator' + (state === 'ok' ? ' ok' : state === 'err' ? ' err' : '');
+  dot.title = state === 'ok'   ? '☁️ Sync OK'
+            : state === 'err'  ? '⚠️ Sync échoué'
+            : state === 'push' ? '⏫ Envoi…'
+            : '';
+}
+
+function scheduleServerPush() {
+  clearTimeout(_serverPushTimer);
+  _serverPushTimer = setTimeout(serverPush, 1500);
+}
+
+async function serverPush() {
+  try {
+    setSyncDotLocal('push');
+    const payload = {
+      device: navigator.userAgent.slice(0, 60),
+      data: {
+        tasks,
+        todayTasks,
+        focusTasks,
+        freeNotes,
+        savedAt: new Date().toISOString(),
+      }
+    };
+    const r = await fetch(SERVER_SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const json = await r.json();
+    if (json.ok) {
+      localStorage.setItem(SERVER_TS_KEY, json.savedAt);
+      setSyncDotLocal('ok');
+    } else {
+      setSyncDotLocal('err');
+    }
+  } catch(e) {
+    setSyncDotLocal('err');
+  }
+}
+
+async function serverPull() {
+  try {
+    const r = await fetch(SERVER_SYNC_URL + '?t=' + Date.now());
+    if (!r.ok) return;
+    const json = await r.json();
+    if (!json.ok || !json.data) return; // pas encore de données sur le serveur
+
+    const serverTs  = json.savedAt ? new Date(json.savedAt).getTime() : 0;
+    const localTs   = new Date(localStorage.getItem(SERVER_TS_KEY) || 0).getTime();
+
+    // Le serveur est plus récent que ce qu'on a vu pour la dernière fois
+    if (serverTs > localTs) {
+      const d = json.data;
+      if (Array.isArray(d.tasks))      { tasks      = d.tasks;      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+      if (Array.isArray(d.todayTasks)) { todayTasks = d.todayTasks; localStorage.setItem(TODAY_KEY,   JSON.stringify(todayTasks)); }
+      if (Array.isArray(d.focusTasks)) { focusTasks = d.focusTasks; localStorage.setItem('taskflow_focus_list_v1', JSON.stringify(focusTasks)); }
+      if (Array.isArray(d.freeNotes))  {
+        freeNotes = d.freeNotes;
+        localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
+      }
+      localStorage.setItem(SERVER_TS_KEY, json.savedAt);
+      renderAll();
+      if (typeof renderToday === 'function')    renderToday();
+      if (typeof renderFocus === 'function')    renderFocus();
+      if (typeof renderFreeNotes === 'function') renderFreeNotes();
+      setSyncDotLocal('ok');
+      toast('📲 Données rechargées depuis le serveur', 'info');
+    } else {
+      setSyncDotLocal('ok');
+    }
+  } catch(e) {
+    // silencieux au démarrage — pas bloquant
+  }
+}
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 function cap(s) { if (!s) return s; return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -2038,6 +2427,7 @@ function pushHistory(desc) {
   actionHistory.push({
     tasks:      JSON.parse(JSON.stringify(tasks)),
     todayTasks: JSON.parse(JSON.stringify(todayTasks)),
+    focusTasks: JSON.parse(JSON.stringify(focusTasks)),
     desc,
     ts: Date.now()
   });
@@ -2053,14 +2443,17 @@ function undoLastAction() {
   redoStack.push({
     tasks:      JSON.parse(JSON.stringify(tasks)),
     todayTasks: JSON.parse(JSON.stringify(todayTasks)),
+    focusTasks: JSON.parse(JSON.stringify(focusTasks)),
     desc: 'État avant annulation',
     ts:   Date.now()
   });
   const entry = actionHistory.pop();
   tasks      = entry.tasks;
   todayTasks = entry.todayTasks;
+  if (entry.focusTasks) { focusTasks = entry.focusTasks; saveFocusList(); }
   save(); saveToday(); renderAll();
   if (currentView === 'today') renderToday();
+  if (currentView === 'focus') renderFocus();
   toast(`↩ Annulé : ${entry.desc}`, 'info');
   updateUndoBtn();
 }
@@ -2073,6 +2466,7 @@ function undoToIndex(idx) {
   redoStack.push({
     tasks:      JSON.parse(JSON.stringify(tasks)),
     todayTasks: JSON.parse(JSON.stringify(todayTasks)),
+    focusTasks: JSON.parse(JSON.stringify(focusTasks)),
     desc: 'État avant retour historique',
     ts:   Date.now()
   });
@@ -2082,8 +2476,10 @@ function undoToIndex(idx) {
   const entry = actionHistory.pop();
   tasks      = entry.tasks;
   todayTasks = entry.todayTasks;
+  if (entry.focusTasks) { focusTasks = entry.focusTasks; saveFocusList(); }
   save(); saveToday(); renderAll();
   if (currentView === 'today') renderToday();
+  if (currentView === 'focus') renderFocus();
   toast(`↩ Retour : ${entry.desc}`, 'info');
   updateUndoBtn();
 }
@@ -2095,6 +2491,7 @@ function redoLastAction() {
   actionHistory.push({
     tasks:      JSON.parse(JSON.stringify(tasks)),
     todayTasks: JSON.parse(JSON.stringify(todayTasks)),
+    focusTasks: JSON.parse(JSON.stringify(focusTasks)),
     desc:       '← avant rétablissement',
     ts:         Date.now()
   });
@@ -2102,8 +2499,10 @@ function redoLastAction() {
   // Restaurer
   tasks      = entry.tasks;
   todayTasks = entry.todayTasks;
+  if (entry.focusTasks) { focusTasks = entry.focusTasks; saveFocusList(); }
   save(); saveToday(); renderAll();
   if (currentView === 'today') renderToday();
+  if (currentView === 'focus') renderFocus();
   toast(`↪ Rétabli : ${entry.desc}`, 'info');
   updateUndoBtn();
 }
@@ -2196,9 +2595,42 @@ function updateUndoBtn() {
 }
 
 // ═══════════════════════════════════════════════
+//  THÈME CLAIR / SOMBRE
+// ═══════════════════════════════════════════════
+const THEMES = ['dark', 'light', 'violet'];
+const THEME_INFO = {
+  dark:   { label: '🌙 Sombre',  toast: '🌙 Thème sombre activé' },
+  light:  { label: '☀️ Clair',   toast: '☀️ Thème clair activé' },
+  violet: { label: '🌌 Violet',  toast: '🌌 Thème nuit violette activé' },
+};
+function getCurrentTheme() { return localStorage.getItem('taskflow_theme') || 'violet'; }
+function applyTheme(t) {
+  document.body.classList.remove('theme-light', 'theme-violet');
+  if (t === 'light')  document.body.classList.add('theme-light');
+  if (t === 'violet') document.body.classList.add('theme-violet');
+  localStorage.setItem('taskflow_theme', t);
+  updateThemeBtn();
+}
+function toggleTheme() {
+  const next = THEMES[(THEMES.indexOf(getCurrentTheme()) + 1) % THEMES.length];
+  applyTheme(next);
+  toast(THEME_INFO[next].toast, 'info');
+}
+function updateThemeBtn() {
+  const btn = document.getElementById('btn-theme');
+  if (!btn) return;
+  const next = THEMES[(THEMES.indexOf(getCurrentTheme()) + 1) % THEMES.length];
+  btn.textContent = THEME_INFO[next].label;
+  btn.title = 'Thème suivant : ' + THEME_INFO[next].label;
+}
+updateThemeBtn();
+
+// ═══════════════════════════════════════════════
 //  VIEW SWITCH
 // ═══════════════════════════════════════════════
 function switchView(v) {
+  // Si une matrice est agrandie, la refermer avant de changer de vue
+  if (maximizedQuad) toggleMaximizeQuad(maximizedQuad);
   currentView = v;
   document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
   document.getElementById('view-' + v).classList.add('active');
@@ -2207,6 +2639,7 @@ function switchView(v) {
   if (v === 'today') { checkMorningNotes(true); renderToday(); }
   if (v === 'notes') { renderFreeNotes(); }
   if (v === 'matrice') { renderCustomQuads(); }
+  if (v === 'focus') { renderFocus(); }
 }
 
 // ═══════════════════════════════════════════════
@@ -2217,6 +2650,7 @@ function getFiltered() {
   return tasks.filter(t => {
     if (t.status === 'archived' || t.status === 'deleted') return false;
     if (t.inToday) return false; // moved to today — hidden from matrix
+    if (t.inFocus) return false; // moved to focus — hidden from matrix
     // Exclude snoozed tasks from normal quadrants
     if (t.snoozedUntil && t.snoozedUntil > Date.now()) return false;
     if (currentFilter === 'pending') return t.status !== 'done';
@@ -2244,7 +2678,8 @@ function renderAll() {
   updateTabBadges();
   applyQuadOrder();
   applyQuadSizes();
-  renderCustomQuads();
+  renderCustomQuads(filtered);
+  qScrollInitAll();
   if (currentView === 'today') renderToday();
 }
 
@@ -2253,7 +2688,7 @@ function renderQuad(q, filtered) {
   const cnt  = document.getElementById('cnt-' + q);
   const prog = document.getElementById('prog-' + q);
 
-  const allInQ   = tasks.filter(t => t.quad === q && t.status !== 'archived' && t.status !== 'deleted' && !t.inToday);
+  const allInQ   = tasks.filter(t => t.quad === q && t.status !== 'archived' && t.status !== 'deleted' && !t.inToday && !t.inFocus);
   const shown    = filtered.filter(t => t.quad === q);
   const doneCount = allInQ.filter(t => t.status === 'done').length;
 
@@ -2366,7 +2801,8 @@ function makeCard(t) {
           <div class="subnote-item${sn.done?' sn-done':''}" id="sni-${t.id}-${i}">
             <div class="sn-bullet" onclick="toggleSubnote('${t.id}',${i},event)">${sn.done?'✓':''}</div>
             <span class="subnote-text">${escHtml(sn.text)}</span>
-            <button class="sn-del" onclick="deleteSubnote('${t.id}',${i},event)" title="Supprimer">✕</button>
+            <button class="sn-edit" onclick="editSubnote('${t.id}',${i},event)" title="Éditer">✏️</button>
+            <button class="sn-del"  onclick="deleteSubnote('${t.id}',${i},event)" title="Supprimer">✕</button>
           </div>`).join('')}
        </div>`
     : `<div class="subnotes-list" id="snl-${t.id}"></div>`;
@@ -2397,6 +2833,7 @@ function makeCard(t) {
       <button class="task-btn" onclick="openEdit('${t.id}',event)">✏️ Éditer</button>
       <button class="task-btn" onclick="openMove('${t.id}',event)">↗ Déplacer</button>
       <button class="task-btn today-btn-card" onclick="sendToToday('${t.id}',event)">${alreadyToday?'☀️✓':'☀️ Aujourd\'hui'}</button>
+      <button class="task-btn focus-btn-card" onclick="sendToFocus('${t.id}',event)" title="Déplacer vers le Focus">${focusTasks.some(f=>f.originTaskId===t.id)?'🎯✓':'🎯 Focus'}</button>
       <button class="task-btn" onclick="toggleSeenToday('${t.id}',event)" title="${seenToday?'Retirer marque vue':'Marquer comme vu aujourd\'hui'}" style="color:${seenToday?'var(--q2-color)':'var(--text3)'}">${seenToday?'👁 Vu':'👁'}</button>
       <button class="task-btn" onclick="snoozeTask('${t.id}',event)" style="color:var(--text3)">📦 1 sem.</button>
       <button class="task-btn" onclick="copyTaskTitle('${t.id}',event)" title="Copier le titre">📋 Copier</button>
@@ -2447,6 +2884,9 @@ function updateTabBadges() {
   const trashCount = tasks.filter(t=>t.status==='deleted').length;
   document.getElementById('tab-badge-matrice').textContent = matBadge;
   document.getElementById('tab-badge-today').textContent   = todBadge + ' en cours';
+  const focBadge = (typeof focusTasks !== 'undefined') ? focusTasks.filter(t=>!t.done).length : 0;
+  const focEl = document.getElementById('tab-badge-focus');
+  if (focEl) focEl.textContent = focBadge;
   // Show trash count on Archive button
   const arcBtn = document.querySelector('.btn-icon[onclick="openArchive()"]');
   if (arcBtn) arcBtn.textContent = trashCount > 0 ? `🗑 Archive (${trashCount})` : '📦 Archive';
@@ -2456,6 +2896,10 @@ function updateTabBadges() {
 //  TODAY VIEW RENDER
 // ═══════════════════════════════════════════════
 function renderToday() {
+  // Indicateur d'urgence
+  autoDetectUrgency();
+  updateUrgencyBtn();
+
   // Date
   const now = new Date();
   document.getElementById('today-date-label').textContent =
@@ -2491,7 +2935,10 @@ function renderToday() {
     } else if (todaySort === 'alpha') {
       pending.sort((a,b) => a.title.localeCompare(b.title,'fr',{sensitivity:'base'}));
     }
-    [...pending, ...done].forEach(t => listBody.appendChild(makeTodayItem(t)));
+    // Les tâches focusées remontent toujours en tête
+    const focused    = pending.filter(t => focusIds.has(t.id));
+    const unfocused  = pending.filter(t => !focusIds.has(t.id));
+    [...focused, ...unfocused, ...done].forEach(t => listBody.appendChild(makeTodayItem(t)));
   }
 
   // Sync sort chips
@@ -2502,11 +2949,60 @@ function renderToday() {
 
   // Picker
   updateTabBadges();
+  // Appliquer le mode focus après rendu
+  applyFocusStyles();
 }
 
 function setTodaySort(mode) {
   todaySort = mode;
   renderToday();
+}
+
+// ── Indicateur d'urgence ─────────────────────────────────────────────────────
+const URGENCY_KEY = 'taskflow_today_urgency';
+const URGENCY_LEVELS = [
+  { id: 'calme',     icon: '🟢', label: 'Calme',     color: 'var(--q2-color)',  bg: 'rgba(63,185,80,.12)'  },
+  { id: 'attention', icon: '🟡', label: 'Attention',  color: '#d29922',          bg: 'rgba(210,153,34,.12)' },
+  { id: 'urgent',    icon: '🔴', label: 'URGENT',     color: 'var(--q1-color)',  bg: 'rgba(248,81,73,.15)',  pulse: true },
+];
+
+function getTodayUrgency() {
+  return localStorage.getItem(URGENCY_KEY) || 'calme';
+}
+
+function cycleTodayUrgency() {
+  const cur   = getTodayUrgency();
+  const idx   = URGENCY_LEVELS.findIndex(l => l.id === cur);
+  const next  = URGENCY_LEVELS[(idx + 1) % URGENCY_LEVELS.length];
+  localStorage.setItem(URGENCY_KEY, next.id);
+  updateUrgencyBtn();
+  toast(`Journée : ${next.icon} ${next.label}`, next.id === 'urgent' ? 'error' : next.id === 'attention' ? 'gold' : 'success');
+}
+
+function autoDetectUrgency() {
+  // Si le user n'a pas changé manuellement, auto-détecter selon les tâches Q1
+  const stored = localStorage.getItem(URGENCY_KEY);
+  if (stored === 'urgent' || stored === 'attention') return; // déjà défini manuellement
+  const hasQ1 = todayTasks.some(t => !t.done && t.originQuad === 'q1');
+  if (hasQ1 && stored !== 'urgent') {
+    localStorage.setItem(URGENCY_KEY, 'urgent');
+    updateUrgencyBtn();
+  }
+}
+
+function updateUrgencyBtn() {
+  const btn = document.getElementById('today-urgency-btn');
+  if (!btn) return;
+  const level = URGENCY_LEVELS.find(l => l.id === getTodayUrgency()) || URGENCY_LEVELS[0];
+  btn.textContent = `${level.icon} ${level.label}`;
+  btn.style.color      = level.color;
+  btn.style.background = level.bg;
+  btn.style.borderColor = level.color;
+  if (level.pulse) {
+    btn.style.animation = 'urgency-pulse 1.4s ease-in-out infinite';
+  } else {
+    btn.style.animation = '';
+  }
 }
 
 // ── Clear entire today list ──────────────────────────
@@ -2665,6 +3161,598 @@ function returnToMatrix(tid) {
   });
 }
 
+// ═══════════════════════════════════════════════
+//  MODE FOCUS — 3 tâches mises en avant
+// ═══════════════════════════════════════════════
+const FOCUS_KEY = 'taskflow_today_focus';
+let focusIds = new Set(JSON.parse(localStorage.getItem(FOCUS_KEY) || '[]'));
+
+function saveFocus() {
+  localStorage.setItem(FOCUS_KEY, JSON.stringify([...focusIds]));
+}
+
+function toggleFocus(id, e) {
+  if (e) e.stopPropagation();
+  if (focusIds.has(id)) {
+    focusIds.delete(id);
+  } else {
+    if (focusIds.size >= 3) {
+      toast('⭐ Maximum 3 tâches en focus — retirez-en une d\'abord', 'gold');
+      return;
+    }
+    focusIds.add(id);
+  }
+  saveFocus();
+  applyFocusStyles();
+}
+
+function clearFocus() {
+  focusIds.clear();
+  saveFocus();
+  applyFocusStyles();
+}
+
+function applyFocusStyles() {
+  const hasFocus = focusIds.size > 0;
+  // Purger les ids qui n'existent plus dans todayTasks
+  [...focusIds].forEach(id => {
+    if (!todayTasks.find(t => t.id === id)) focusIds.delete(id);
+  });
+  saveFocus();
+
+  document.querySelectorAll('.today-item').forEach(el => {
+    const id = el.dataset.tid;
+    el.classList.remove('ti-focus', 'ti-dimmed');
+    // Bouton Focus dans la barre d'actions
+    const actionBtn = document.getElementById('tfab-' + id);
+    if (actionBtn) actionBtn.classList.toggle('active', focusIds.has(id));
+    if (!hasFocus) return;
+    if (focusIds.has(id)) {
+      el.classList.add('ti-focus');
+      el.querySelector('.ti-focus-btn') && (el.querySelector('.ti-focus-btn').textContent = '⭐');
+    } else {
+      if (!el.classList.contains('ti-done')) el.classList.add('ti-dimmed');
+      el.querySelector('.ti-focus-btn') && (el.querySelector('.ti-focus-btn').textContent = '☆');
+    }
+  });
+
+  // Mise à jour de la barre focus
+  const bar = document.getElementById('focus-bar');
+  if (!bar) return;
+  if (hasFocus) {
+    bar.classList.add('visible');
+    for (let i = 0; i < 3; i++) {
+      const dot = document.getElementById('focus-dot-' + i);
+      if (dot) dot.classList.toggle('filled', i < focusIds.size);
+    }
+    const names = [...focusIds].map(id => {
+      const t = todayTasks.find(x => x.id === id);
+      return t ? t.title.slice(0, 28) + (t.title.length > 28 ? '…' : '') : '';
+    }).filter(Boolean);
+    const lbl = document.getElementById('focus-bar-label');
+    if (lbl) lbl.textContent = names.join(' · ');
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  VUE FOCUS — liste dédiée de tâches prioritaires
+// ═══════════════════════════════════════════════
+const FOCUS_LIST_KEY = 'taskflow_focus_list_v1';
+let focusTasks = [];
+try { focusTasks = JSON.parse(localStorage.getItem(FOCUS_LIST_KEY)) || []; }
+catch(e) { focusTasks = []; }
+
+function saveFocusList() {
+  localStorage.setItem(FOCUS_LIST_KEY, JSON.stringify(focusTasks));
+  scheduleServerPush();
+  try { renderPostit(); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+//  POST-IT FLOTTANT — tâches focus dans une fenêtre séparée
+//  (Picture-in-Picture si dispo = toujours au premier plan, sinon popup à droite)
+// ═══════════════════════════════════════════════
+let _postitWin = null;
+
+async function openFocusPostit() {
+  if (_postitWin && !_postitWin.closed) {
+    renderPostit();
+    try { _postitWin.focus(); } catch(e) {}
+    return;
+  }
+  let opened = false;
+  // 1) Document Picture-in-Picture (Chrome/Edge) : fenêtre toujours au premier plan
+  if (window.documentPictureInPicture) {
+    try {
+      _postitWin = await documentPictureInPicture.requestWindow({ width: 300, height: 380 });
+      opened = true;
+    } catch(e) { opened = false; }
+  }
+  // 2) Fallback : popup classique positionnée à droite de l'écran
+  if (!opened) {
+    const left = Math.max(0, (screen.availWidth || 1280) - 330);
+    _postitWin = window.open('', 'taskflowPostit',
+      `width=300,height=400,left=${left},top=90,resizable=yes,scrollbars=no`);
+  }
+  if (!_postitWin) { toast('Popup bloquée — autorise les popups pour ce site', 'error'); return; }
+  renderPostit();
+  toast('📌 Post-it Focus ouvert', 'gold');
+}
+
+function renderPostit() {
+  if (!_postitWin || _postitWin.closed) return;
+  const doc = _postitWin.document;
+  if (!doc) return;
+  try { doc.title = '🎯 Focus — TaskFlow'; } catch(e) {}
+  const pending = focusTasks.filter(t => !t.done);
+  const done    = focusTasks.filter(t => t.done);
+  doc.body.style.cssText = 'margin:0;padding:0;background:#fdf0a0;color:#4a3c0a;' +
+    'font-family:"Segoe Print","Comic Sans MS",sans-serif;overflow-y:auto;';
+  doc.body.innerHTML = `
+    <div style="padding:10px 14px;border-bottom:2px dashed rgba(74,60,10,.3);display:flex;align-items:center;gap:8px;position:sticky;top:0;background:#fdf0a0;">
+      <span style="font-size:1.05rem;font-weight:700;">🎯 Focus</span>
+      <span style="margin-left:auto;font-size:.7rem;opacity:.7;">${pending.length} en cours</span>
+    </div>
+    <div style="padding:8px 14px 16px;">
+      ${(!pending.length && !done.length) ? '<div style="opacity:.6;font-size:.85rem;padding:20px 4px;text-align:center;">Aucune tâche en focus<br>☀️</div>' : ''}
+      ${pending.map(t => `
+        <div class="pi-item" data-id="${t.id}" title="Cliquer pour marquer terminée" style="display:flex;align-items:flex-start;gap:9px;padding:8px 2px;border-bottom:1px dotted rgba(74,60,10,.25);cursor:pointer;">
+          <span style="display:inline-block;width:15px;height:15px;min-width:15px;border:2px solid #4a3c0a;border-radius:4px;margin-top:3px;"></span>
+          <span style="font-size:.88rem;line-height:1.35;">${escHtml(t.title)}</span>
+        </div>`).join('')}
+      ${done.map(t => `
+        <div class="pi-item" data-id="${t.id}" title="Cliquer pour remettre en cours" style="display:flex;align-items:flex-start;gap:9px;padding:8px 2px;opacity:.5;cursor:pointer;">
+          <span style="display:inline-block;width:15px;height:15px;min-width:15px;border:2px solid #4a3c0a;border-radius:4px;margin-top:3px;background:#4a3c0a;color:#fdf0a0;font-size:10px;line-height:12px;text-align:center;">✓</span>
+          <span style="font-size:.88rem;line-height:1.35;text-decoration:line-through;">${escHtml(t.title)}</span>
+        </div>`).join('')}
+    </div>`;
+  doc.querySelectorAll('.pi-item').forEach(el => {
+    el.onclick = () => { toggleFocusDone(el.dataset.id); };
+  });
+}
+
+// Depuis la MATRICE → Focus (comme sendToToday)
+function sendToFocus(taskId, e) {
+  if (e) e.stopPropagation();
+  const t = tasks.find(x => x.id === taskId);
+  if (!t) return;
+  if (focusTasks.some(f => f.originTaskId === taskId)) {
+    toast('Déjà dans le Focus 🎯', 'info');
+    return;
+  }
+  pushHistory(`Vers Focus "${t.title}"`);
+  t.inFocus = true;
+  focusTasks.push({
+    id: uid(), title: t.title, done: false,
+    originQuad: t.quad, originTaskId: t.id, from: 'matrice',
+    notes: [], subnotes: t.subnotes ? [...t.subnotes] : [],
+    createdAt: Date.now(), addedAt: Date.now()
+  });
+  save(); saveFocusList(); renderAll();
+  toast(`🎯 "${t.title}" ajoutée au Focus`, 'gold');
+}
+
+// Depuis AUJOURD'HUI → Focus (déplace l'item)
+function sendTodayToFocus(todayId, e) {
+  if (e) e.stopPropagation();
+  const t = todayTasks.find(x => x.id === todayId);
+  if (!t) return;
+  pushHistory(`Vers Focus "${t.title}"`);
+  focusTasks.push({
+    id: t.id, title: t.title, done: !!t.done,
+    originQuad: t.originQuad || null, originTaskId: t.originTaskId || null, from: 'today',
+    notes: t.notes || [], subnotes: t.subnotes || [],
+    createdAt: t.createdAt || Date.now(), addedAt: Date.now()
+  });
+  todayTasks = todayTasks.filter(x => x.id !== todayId);
+  if (typeof focusIds !== 'undefined' && focusIds.has(todayId)) {
+    focusIds.delete(todayId);
+    localStorage.setItem(FOCUS_KEY, JSON.stringify([...focusIds]));
+  }
+  saveToday(); saveFocusList(); renderToday();
+  toast(`🎯 "${t.title}" déplacée vers le Focus`, 'gold');
+}
+
+function toggleFocusDone(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  if (t.done) { t.doneAt = Date.now(); confetti(); toast('Tâche accomplie ! 🎉', 'gold'); }
+  else { delete t.doneAt; }
+  saveFocusList(); renderFocus(); updateTabBadges();
+}
+
+// Renvoie une tâche focus vers son origine (Aujourd'hui ou Matrice)
+function returnFromFocus(id, silent) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  if (!silent) pushHistory(`Retour depuis Focus "${t.title}"`);
+  if (t.from === 'today') {
+    todayTasks.push({
+      id: t.id, title: t.title, done: !!t.done,
+      originQuad: t.originQuad, originTaskId: t.originTaskId,
+      notes: t.notes || [], subnotes: t.subnotes || [],
+      createdAt: t.createdAt, addedAt: Date.now()
+    });
+    saveToday();
+  } else {
+    const orig = t.originTaskId ? tasks.find(x => x.id === t.originTaskId) : null;
+    if (orig) {
+      delete orig.inFocus;
+      if (t.done) orig.status = 'done';
+    } else {
+      tasks.push({
+        id: uid(), title: t.title, desc: '', quad: t.originQuad || 'q2', tag: '',
+        due: '', status: t.done ? 'done' : 'pending',
+        comments: t.notes || [], subnotes: t.subnotes || [],
+        createdAt: t.createdAt || Date.now()
+      });
+    }
+    save();
+  }
+  focusTasks = focusTasks.filter(x => x.id !== id);
+  saveFocusList();
+  renderAll(); renderFocus();
+  if (!silent) toast(t.from === 'today' ? `↩ "${t.title}" renvoyée vers Aujourd'hui` : `↩ "${t.title}" renvoyée dans la matrice`, 'info');
+}
+
+function returnAllFromFocus() {
+  if (!focusTasks.length) { toast('Le Focus est déjà vide', 'info'); return; }
+  pushHistory('Tout renvoyer depuis Focus');
+  [...focusTasks].forEach(t => returnFromFocus(t.id, true));
+  toast('↩ Toutes les tâches focus renvoyées vers leur origine', 'success');
+}
+
+function renderFocus() {
+  const body  = document.getElementById('focus-list-body');
+  const empty = document.getElementById('focus-empty');
+  const cnt   = document.getElementById('focus-count-label');
+  if (!body) return;
+  body.innerHTML = '';
+  const pendingCnt = focusTasks.filter(t => !t.done).length;
+  if (cnt) cnt.textContent = focusTasks.length ? `${pendingCnt} en cours` : '0';
+  if (empty) empty.style.display = focusTasks.length ? 'none' : 'block';
+
+  const ordered = [...focusTasks.filter(t => !t.done), ...focusTasks.filter(t => t.done)];
+  ordered.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'focus-item' + (t.done ? ' fi-done' : '');
+    const oq = t.originQuad;
+    const oqInfo = oq ? (QUADS[oq] || getQuadInfo(oq)) : null;
+    const originLbl = t.from === 'today'
+      ? '☀️ Aujourd\'hui'
+      : (oqInfo ? `${oqInfo.icon || '📁'} ${oqInfo.label}` : '🗂 Matrice');
+    if (!t.subnotes) t.subnotes = [];
+    const lastNote = t.notes?.length ? t.notes[t.notes.length - 1] : null;
+    const subnotesHtml = `<div class="subnotes-list" id="fi-snl-${t.id}">
+        ${t.subnotes.map((sn,i)=>`
+          <div class="subnote-item${sn.done?' sn-done':''}" id="fi-sni-${t.id}-${i}">
+            <div class="sn-bullet" onclick="toggleFiSubnote('${t.id}',${i},event)">${sn.done?'✓':''}</div>
+            <span class="subnote-text">${escHtml(sn.text)}</span>
+            <button class="sn-edit" onclick="editFiSubnote('${t.id}',${i},event)" title="Éditer">✏️</button>
+            <button class="sn-del"  onclick="deleteFiSubnote('${t.id}',${i},event)" title="Supprimer">✕</button>
+          </div>`).join('')}
+      </div>`;
+    div.innerHTML = `
+      <div class="focus-item-top">
+        <div class="fi-check" onclick="toggleFocusDone('${t.id}')">${t.done ? '✓' : ''}</div>
+        <div class="fi-title">${escHtml(t.title)}</div>
+        <span class="fi-origin" title="Origine">${originLbl}</span>
+      </div>
+      ${lastNote ? `<div class="ti-comment-preview">💬 ${escHtml(lastNote.text)}</div>` : ''}
+      ${subnotesHtml}
+      <div class="subnote-add-form" id="fi-snf-${t.id}">
+        <input class="subnote-input" id="fi-sni-input-${t.id}" placeholder="Ajouter une sous-note…" />
+        <button class="subnote-ok"     onclick="saveFiSubnote('${t.id}',event)">＋ OK</button>
+        <button class="subnote-cancel" onclick="closeFiSubnoteForm('${t.id}',event)">✕</button>
+      </div>
+      <div class="ti-comment-form" id="fi-cf-${t.id}">
+        <input class="ti-comment-input" type="text" id="fi-ci-${t.id}" placeholder="Note rapide…" />
+        <button class="ti-comment-save" onclick="saveFiInlineComment('${t.id}')">OK</button>
+      </div>
+      <div class="ti-edit-form" id="fi-ef-${t.id}">
+        <input class="ti-edit-input" id="fi-ei-${t.id}" type="text" placeholder="Titre de la tâche…" />
+        <button class="subnote-ok"     onclick="saveFocusInlineEdit('${t.id}',event)">✓ OK</button>
+        <button class="subnote-cancel" onclick="closeFocusInlineEdit('${t.id}',event)">✕</button>
+      </div>
+      <div class="fi-actions">
+        <button class="task-btn move-btn move-edge" onclick="moveFocusToTop('${t.id}',event)" title="Début de liste">⤒</button>
+        <button class="task-btn move-btn" onclick="moveFocusItem('${t.id}',-1,event)" title="Monter">▲</button>
+        <button class="task-btn move-btn" onclick="moveFocusItem('${t.id}',+1,event)" title="Descendre">▼</button>
+        <button class="task-btn move-btn move-edge" onclick="moveFocusToBottom('${t.id}',event)" title="Fin de liste">⤓</button>
+        <button class="fi-btn fi-return" onclick="returnFromFocus('${t.id}')" title="Renvoyer vers ${t.from === 'today' ? "Aujourd'hui" : 'la matrice'}">↩ Renvoyer</button>
+        <button class="fi-btn" onclick="openMoveFocus('${t.id}')" title="Classer dans une matrice">↗ Déplacer</button>
+        <button class="fi-btn" onclick="openFiSubnoteForm('${t.id}',event)">📝 Sous-note</button>
+        <button class="fi-btn" onclick="toggleFiCommentForm('${t.id}')">💬 Note</button>
+        <button class="fi-btn" onclick="openEditFromFocus('${t.id}',event)">✏️ Éditer</button>
+        <button class="fi-btn" onclick="copyFocusTitle('${t.id}')" title="Copier le titre">📋 Copier</button>
+        <button class="fi-btn" onclick="addFocusToCalendar('${t.id}')" style="color:var(--q2-color)" title="Ajouter à Google Agenda">📅 Agenda</button>
+        <button class="fi-btn" onclick="emailFocusTask('${t.id}')" title="Envoyer par email">📧 Email</button>
+        <button class="fi-btn" onclick="archiveFocusTask('${t.id}')" style="margin-left:auto;color:var(--text3)">🗃 Archiver</button>
+        <button class="fi-btn" onclick="deleteFocusTask('${t.id}')" style="color:var(--q1-color)">🗑 Supprimer</button>
+      </div>`;
+
+    // Raccourcis clavier des formulaires inline
+    div.querySelector(`#fi-ci-${t.id}`)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); saveFiInlineComment(t.id); }
+      if (e.key === 'Escape') { e.preventDefault(); toggleFiCommentForm(t.id); }
+    });
+    div.querySelector(`#fi-sni-input-${t.id}`)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); saveFiSubnote(t.id, e); }
+      if (e.key === 'Escape') { e.preventDefault(); closeFiSubnoteForm(t.id, e); }
+    });
+    div.querySelector(`#fi-ei-${t.id}`)?.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); saveFocusInlineEdit(t.id, e); }
+      if (e.key === 'Escape') { e.preventDefault(); closeFocusInlineEdit(t.id, e); }
+    });
+    body.appendChild(div);
+  });
+  updateTabBadges();
+}
+
+function copyFocusTitle(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  navigator.clipboard?.writeText(t.title).then(() => toast('Titre copié 📋', 'info'));
+}
+
+// ── Réordonner dans le Focus ──
+function moveFocusItem(id, dir, e) {
+  if (e) e.stopPropagation();
+  const idx = focusTasks.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const ni = idx + dir;
+  if (ni < 0 || ni >= focusTasks.length) return;
+  [focusTasks[idx], focusTasks[ni]] = [focusTasks[ni], focusTasks[idx]];
+  saveFocusList(); renderFocus();
+}
+function moveFocusToTop(id, e) {
+  if (e) e.stopPropagation();
+  const idx = focusTasks.findIndex(x => x.id === id);
+  if (idx <= 0) return;
+  const [t] = focusTasks.splice(idx, 1);
+  focusTasks.unshift(t);
+  saveFocusList(); renderFocus();
+}
+function moveFocusToBottom(id, e) {
+  if (e) e.stopPropagation();
+  const idx = focusTasks.findIndex(x => x.id === id);
+  if (idx < 0 || idx === focusTasks.length - 1) return;
+  const [t] = focusTasks.splice(idx, 1);
+  focusTasks.push(t);
+  saveFocusList(); renderFocus();
+}
+
+// ── Sous-notes dans le Focus ──
+function openFiSubnoteForm(id, e) {
+  if (e) e.stopPropagation();
+  document.getElementById('fi-snf-' + id)?.classList.add('open');
+  document.getElementById('fi-sni-input-' + id)?.focus();
+}
+function closeFiSubnoteForm(id, e) {
+  if (e) e.stopPropagation();
+  document.getElementById('fi-snf-' + id)?.classList.remove('open');
+  const inp = document.getElementById('fi-sni-input-' + id);
+  if (inp) inp.value = '';
+}
+function saveFiSubnote(id, e) {
+  if (e) e.stopPropagation();
+  const inp  = document.getElementById('fi-sni-input-' + id);
+  const text = inp?.value?.trim();
+  if (!text) { inp?.focus(); return; }
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  if (!t.subnotes) t.subnotes = [];
+  t.subnotes.push({ text, done: false, createdAt: Date.now() });
+  saveFocusList(); renderFocus();
+  // Rouvrir le formulaire pour enchaîner les sous-notes
+  openFiSubnoteForm(id);
+}
+function toggleFiSubnote(id, idx, e) {
+  if (e) e.stopPropagation();
+  const t = focusTasks.find(x => x.id === id);
+  if (!t?.subnotes?.[idx]) return;
+  t.subnotes[idx].done = !t.subnotes[idx].done;
+  saveFocusList();
+  const item = document.getElementById(`fi-sni-${id}-${idx}`);
+  if (item) {
+    item.classList.toggle('sn-done', t.subnotes[idx].done);
+    item.querySelector('.sn-bullet').textContent = t.subnotes[idx].done ? '✓' : '';
+  }
+}
+function deleteFiSubnote(id, idx, e) {
+  if (e) e.stopPropagation();
+  const t = focusTasks.find(x => x.id === id);
+  if (!t?.subnotes) return;
+  t.subnotes.splice(idx, 1);
+  saveFocusList(); renderFocus();
+}
+function editFiSubnote(id, idx, e) {
+  if (e) e.stopPropagation();
+  const item = document.getElementById(`fi-sni-${id}-${idx}`);
+  const t = focusTasks.find(x => x.id === id);
+  if (!item || !t?.subnotes?.[idx]) return;
+  const sn = t.subnotes[idx];
+  item.innerHTML = `
+    <input class="sn-edit-input" id="fi-sni-edit-${id}-${idx}" value="${escHtml(sn.text)}" />
+    <button class="subnote-ok"     onclick="saveFiSubnoteEdit('${id}',${idx},event)">✓</button>
+    <button class="subnote-cancel" onclick="renderFocus()">✕</button>`;
+  const inp = document.getElementById(`fi-sni-edit-${id}-${idx}`);
+  inp?.focus(); inp?.select();
+  inp?.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { ev.preventDefault(); saveFiSubnoteEdit(id, idx, ev); }
+    if (ev.key === 'Escape') { ev.preventDefault(); renderFocus(); }
+  });
+}
+function saveFiSubnoteEdit(id, idx, e) {
+  if (e) e.stopPropagation();
+  const inp  = document.getElementById(`fi-sni-edit-${id}-${idx}`);
+  const text = inp?.value?.trim();
+  if (!text) { inp?.focus(); return; }
+  const t = focusTasks.find(x => x.id === id);
+  if (!t?.subnotes?.[idx]) return;
+  t.subnotes[idx].text = text;
+  saveFocusList(); renderFocus();
+}
+
+// ── Note rapide dans le Focus ──
+function toggleFiCommentForm(id) {
+  const form = document.getElementById('fi-cf-' + id);
+  if (!form) return;
+  const isOpen = form.classList.toggle('open');
+  if (isOpen) document.getElementById('fi-ci-' + id)?.focus();
+}
+function saveFiInlineComment(id) {
+  const inp  = document.getElementById('fi-ci-' + id);
+  const text = inp?.value?.trim();
+  if (!text) return;
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  if (!t.notes) t.notes = [];
+  t.notes.push({ text, date: Date.now() });
+  saveFocusList(); renderFocus();
+  toast('Note enregistrée', 'gold');
+}
+
+// ── Édition du titre depuis le Focus ──
+function openEditFromFocus(id, e) {
+  if (e) e.stopPropagation();
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  if (t.originTaskId && tasks.find(x => x.id === t.originTaskId)) {
+    openEdit(t.originTaskId);
+  } else {
+    const form = document.getElementById('fi-ef-' + id);
+    const inp  = document.getElementById('fi-ei-' + id);
+    if (inp) { inp.value = t.title; }
+    form?.classList.add('open');
+    inp?.focus();
+  }
+}
+function closeFocusInlineEdit(id, e) {
+  if (e) e.stopPropagation();
+  document.getElementById('fi-ef-' + id)?.classList.remove('open');
+}
+function saveFocusInlineEdit(id, e) {
+  if (e) e.stopPropagation();
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  const inp      = document.getElementById('fi-ei-' + id);
+  const newTitle = cap(inp?.value.trim());
+  if (!newTitle) { toast('Titre obligatoire', 'error'); return; }
+  pushHistory(`Modification titre "${t.title}"`);
+  t.title = newTitle;
+  saveFocusList(); renderFocus();
+  toast('Titre modifié ✓', 'success');
+}
+
+// ── Déplacer depuis le Focus vers une matrice ──
+let moveFocusId = null;
+function openMoveFocus(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  moveFocusId = id;
+  const opts = document.getElementById('move-options');
+  opts.innerHTML = '';
+  const addOption = (key, icon, label, sub, color) => {
+    const isCurrent = key === t.originQuad;
+    const div = document.createElement('div');
+    div.className = `move-option ${QUADS[key] ? key + '-opt' : ''}${isCurrent ? ' disabled' : ''}`;
+    if (!QUADS[key]) div.style.cssText = `border-left:3px solid ${color};padding-left:10px;${isCurrent ? 'opacity:.45;cursor:default;' : 'cursor:pointer;'}`;
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.1rem">${icon}</span>
+        <div>
+          <div style="font-weight:700;font-size:.85rem;${color ? 'color:' + color : ''}">${label}</div>
+          <div style="font-size:.72rem;opacity:.65;margin-top:1px">→ ${sub}${isCurrent ? ' <span style="color:var(--accent)">(origine)</span>' : ''}</div>
+        </div>
+      </div>`;
+    if (!isCurrent) div.onclick = () => moveFocusTask(key);
+    opts.appendChild(div);
+  };
+  Object.entries(QUADS).forEach(([key, val]) => addOption(key, val.icon, val.label, val.action, ''));
+  customQuads.forEach(cq => addOption(cq.id, cq.icon || '🔧', cq.label, 'Matrice personnalisée', cq.color));
+  document.getElementById('move-modal').classList.add('open');
+}
+function moveFocusTask(toQuad) {
+  const t = focusTasks.find(x => x.id === moveFocusId);
+  if (!t) return;
+  pushHistory(`Classée "${t.title}" depuis Focus`);
+  const orig = t.originTaskId ? tasks.find(x => x.id === t.originTaskId) : null;
+  if (orig) {
+    orig.quad   = toQuad;
+    orig.status = t.done ? 'done' : 'pending';
+    delete orig.inFocus; delete orig.inToday;
+  } else {
+    tasks.push({
+      id: t.originTaskId || uid(),
+      title: t.title, desc: '', quad: toQuad, tag: '',
+      due: '', status: t.done ? 'done' : 'pending',
+      comments: t.notes || [], subnotes: t.subnotes || [],
+      createdAt: t.createdAt || Date.now()
+    });
+  }
+  focusTasks = focusTasks.filter(x => x.id !== moveFocusId);
+  moveFocusId = null;
+  save(); saveFocusList();
+  document.getElementById('move-modal').classList.remove('open');
+  renderAll(); renderFocus();
+  const label = QUADS[toQuad]?.label || customQuads.find(q => q.id === toQuad)?.label || toQuad;
+  toast(`Déplacée vers "${label.split('—')[0].trim()}" ✓`, 'success');
+}
+
+// ── Agenda / Email depuis le Focus ──
+function addFocusToCalendar(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  const orig = t.originTaskId ? tasks.find(x => x.id === t.originTaskId) : null;
+  openGoogleCalendar(t.title, '', orig?.due || '');
+}
+function emailFocusTask(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (t) emailNote(t.title, '');
+}
+
+// ── Archiver / Supprimer depuis le Focus ──
+function archiveFocusTask(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  pushHistory(`Archive "${t.title}" depuis Focus`);
+  const orig = t.originTaskId ? tasks.find(x => x.id === t.originTaskId) : null;
+  if (orig) {
+    orig.status     = 'archived';
+    orig.archivedAt = Date.now();
+    delete orig.inFocus; delete orig.inToday;
+  } else {
+    tasks.push({ id: uid(), title: t.title, desc: '', quad: t.originQuad || 'q2', tag: '',
+      due: '', status: 'archived', archivedAt: Date.now(),
+      comments: t.notes || [], subnotes: t.subnotes || [], createdAt: t.createdAt || Date.now() });
+  }
+  focusTasks = focusTasks.filter(x => x.id !== id);
+  save(); saveFocusList(); renderAll(); renderFocus();
+  toast('Archivée 🗃', 'info');
+}
+function deleteFocusTask(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  pushHistory(`Suppression "${t.title}" depuis Focus`);
+  const orig = t.originTaskId ? tasks.find(x => x.id === t.originTaskId) : null;
+  if (orig) {
+    orig.status    = 'deleted';
+    orig.deletedAt = Date.now();
+    delete orig.inFocus; delete orig.inToday;
+  } else {
+    tasks.push({ id: uid(), title: t.title, desc: '', quad: t.originQuad || 'q2', tag: '',
+      due: '', status: 'deleted', deletedAt: Date.now(),
+      comments: t.notes || [], subnotes: t.subnotes || [], createdAt: t.createdAt || Date.now() });
+  }
+  focusTasks = focusTasks.filter(x => x.id !== id);
+  save(); saveFocusList(); renderAll(); renderFocus();
+  toast('🗑 Supprimée — récupérable 7 jours dans Archive', 'info');
+}
+
 function makeTodayItem(t) {
   const wrap = document.createElement('div');
   wrap.className = 'today-item' + (t.done?' ti-done':'') + (t.reviewed&&!t.done?' ti-reviewed':'');
@@ -2685,7 +3773,8 @@ function makeTodayItem(t) {
           <div class="subnote-item${sn.done?' sn-done':''}" id="ti-sni-${t.id}-${i}">
             <div class="sn-bullet" onclick="toggleTiSubnote('${t.id}',${i},event)">${sn.done?'✓':''}</div>
             <span class="subnote-text">${escHtml(sn.text)}</span>
-            <button class="sn-del" onclick="deleteTiSubnote('${t.id}',${i},event)">✕</button>
+            <button class="sn-edit" onclick="editTiSubnote('${t.id}',${i},event)" title="Éditer">✏️</button>
+            <button class="sn-del"  onclick="deleteTiSubnote('${t.id}',${i},event)" title="Supprimer">✕</button>
           </div>`).join('')}
        </div>`
     : `<div class="subnotes-list ti-subnotes-list" id="ti-snl-${t.id}"></div>`;
@@ -2699,6 +3788,7 @@ function makeTodayItem(t) {
       <div class="ti-check" onclick="toggleTodayDone('${t.id}')">${t.done?'✓':''}</div>
       <div class="ti-title">${escHtml(t.title)}</div>
       ${originBadge}
+      <button class="ti-focus-btn" onclick="toggleFocus('${t.id}',event)" title="Mettre en focus (max 3)">⭐</button>
       <button class="ti-reviewed-btn${t.reviewed?' reviewed':''}" onclick="toggleTodayReviewed('${t.id}')" title="${t.reviewed?'Marquer comme non revu':'Marquer comme revu aujourd\'hui'}">${t.reviewed?'👁 Revu':'👁'}</button>
     </div>
     ${lastNote ? `<div class="ti-comment-preview">💬 ${escHtml(lastNote.text)}</div>` : ''}
@@ -2722,14 +3812,17 @@ function makeTodayItem(t) {
       <button class="task-btn move-btn" onclick="moveTodayItem('${t.id}',-1,event)" title="Monter">▲</button>
       <button class="task-btn move-btn" onclick="moveTodayItem('${t.id}',+1,event)" title="Descendre">▼</button>
       <button class="task-btn move-btn move-edge" onclick="moveTodayToBottom('${t.id}',event)" title="Fin de liste">⤓</button>
-      ${oq ? `<button class="ti-return-btn r${oq}" onclick="returnToMatrix('${t.id}')" title="Renvoyer dans ${QUADS[oq].label}">${QUADS[oq].icon} Retour matrice</button>` : ''}
+      ${oq ? (()=>{ const qi=QUADS[oq]||customQuads.find(q=>q.id===oq)||{label:oq,icon:'📌'}; return `<button class="ti-return-btn r${QUADS[oq]?oq:'q4'}" onclick="returnToMatrix('${t.id}')" title="Renvoyer dans ${qi.label}">${qi.icon} Retour matrice</button>`; })() : ''}
       <select class="ti-reclassify" onchange="reclassifyToday('${t.id}',this.value);this.value=''">
         <option value="">↗ Classer dans la matrice…</option>
         <option value="q1">⚡ Q1 — Urgent &amp; Important</option>
         <option value="q2">📅 Q2 — Important &amp; Non Urgent</option>
         <option value="q3">🤝 Q3 — Urgent &amp; Non Important</option>
         <option value="q4">🗑️ Q4 — Non Urgent &amp; Non Important</option>
+        ${customQuads.map(cq=>`<option value="${cq.id}">${cq.label}</option>`).join('')}
       </select>
+      <button class="ti-focus-action-btn${focusIds.has(t.id)?' active':''}" id="tfab-${t.id}" onclick="toggleFocus('${t.id}',event)" title="Mettre en focus — remonte en tête de liste">⭐ Focus</button>
+      <button class="ti-focus-action-btn" onclick="sendTodayToFocus('${t.id}',event)" title="Déplacer vers l'onglet Focus">🎯 → Focus</button>
       <button class="ti-comment-btn" onclick="toggleTiCommentForm('${t.id}')">💬 Note</button>
       <button class="ti-comment-btn" onclick="openEditFromToday('${t.id}',event)">✏️ Éditer</button>
       <button class="ti-comment-btn" onclick="copyTodayTitle('${t.id}')">📋 Copier</button>
@@ -2738,6 +3831,12 @@ function makeTodayItem(t) {
       <button class="ti-del-btn" style="color:var(--text3)" onclick="archiveTodayTask('${t.id}')">🗃 Archiver</button>
       <button class="ti-del-btn" onclick="deleteTodayTask('${t.id}')">🗑 Supprimer</button>
     </div>`;
+
+  // ── Keyboard handling for inline note rapide (today) ──
+  wrap.querySelector(`#tci-${t.id}`)?.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); saveTiInlineComment(t.id); }
+    if (e.key === 'Escape') { e.preventDefault(); toggleTiCommentForm(t.id); }
+  });
 
   // ── Keyboard handling for subnote input (today) ──
   wrap.querySelector(`#ti-sni-input-${t.id}`)?.addEventListener('keydown', e => {
@@ -2871,16 +3970,16 @@ function sendToToday(taskId, e) {
   const t = tasks.find(x=>x.id===taskId);
   if (!t) return;
   if (todayTasks.some(td=>td.originTaskId===taskId)) {
-    toast('Déjà dans la liste du jour', 'info');
-    switchView('today'); return;
+    toast('Déjà dans la liste du jour ☀️', 'info');
+    return;
   }
   // MOVE: hide from matrix via inToday flag
   pushHistory(`Vers Aujourd'hui "${t.title}"`);
   t.inToday = true;
   todayTasks.push({ id:uid(), title:t.title, done:false, originQuad:t.quad, originTaskId:t.id,
     notes:[], subnotes: t.subnotes ? [...t.subnotes] : [], createdAt:Date.now(), addedAt:Date.now() });
-  save(); saveToday(); renderAll(); switchView('today');
-  toast(`Déplacée dans Aujourd'hui ☀️`, 'gold');
+  save(); saveToday(); renderAll();
+  toast(`☀️ "${t.title}" ajoutée à Aujourd'hui`, 'gold');
 }
 
 function toggleTodayReviewed(id) {
@@ -3142,7 +4241,8 @@ function saveSubnote(id, e) {
     item.innerHTML = `
       <div class="sn-bullet" onclick="toggleSubnote('${id}',${i},event)"></div>
       <span class="subnote-text">${escHtml(sn.text)}</span>
-      <button class="sn-del" onclick="deleteSubnote('${id}',${i},event)">✕</button>`;
+      <button class="sn-edit" onclick="editSubnote('${id}',${i},event)" title="Éditer">✏️</button>
+      <button class="sn-del"  onclick="deleteSubnote('${id}',${i},event)" title="Supprimer">✕</button>`;
     list.appendChild(item);
   }
   input.value = '';
@@ -3172,6 +4272,60 @@ function deleteSubnote(id, idx, e) {
   t.subnotes.splice(idx, 1);
   save();
   renderAll(); // full re-render to fix indices
+}
+
+function editSubnote(id, idx, e) {
+  if (e) e.stopPropagation();
+  const item = document.getElementById(`sni-${id}-${idx}`);
+  if (!item) return;
+  const t = tasks.find(x=>x.id===id);
+  if (!t?.subnotes?.[idx]) return;
+  const sn = t.subnotes[idx];
+  item.innerHTML = `
+    <input class="sn-edit-input" id="sni-edit-${id}-${idx}" value="${escHtml(sn.text)}" />
+    <button class="subnote-ok"     onclick="saveSubnoteEdit('${id}',${idx},event)">✓</button>
+    <button class="subnote-cancel" onclick="cancelSubnoteEdit('${id}',${idx},event)">✕</button>`;
+  const inp = document.getElementById(`sni-edit-${id}-${idx}`);
+  inp?.focus(); inp?.select();
+  inp?.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { ev.preventDefault(); saveSubnoteEdit(id, idx, ev); }
+    if (ev.key === 'Escape') { ev.preventDefault(); cancelSubnoteEdit(id, idx, ev); }
+  });
+}
+function saveSubnoteEdit(id, idx, e) {
+  if (e) e.stopPropagation();
+  const inp = document.getElementById(`sni-edit-${id}-${idx}`);
+  const text = inp?.value?.trim();
+  if (!text) { inp?.focus(); return; }
+  const t = tasks.find(x=>x.id===id);
+  if (!t?.subnotes?.[idx]) return;
+  t.subnotes[idx].text = text;
+  save();
+  const item = document.getElementById(`sni-${id}-${idx}`);
+  if (item) {
+    const done = t.subnotes[idx].done;
+    item.className = `subnote-item${done?' sn-done':''}`;
+    item.innerHTML = `
+      <div class="sn-bullet" onclick="toggleSubnote('${id}',${idx},event)">${done?'✓':''}</div>
+      <span class="subnote-text">${escHtml(text)}</span>
+      <button class="sn-edit" onclick="editSubnote('${id}',${idx},event)" title="Éditer">✏️</button>
+      <button class="sn-del"  onclick="deleteSubnote('${id}',${idx},event)" title="Supprimer">✕</button>`;
+  }
+}
+function cancelSubnoteEdit(id, idx, e) {
+  if (e) e.stopPropagation();
+  const t = tasks.find(x=>x.id===id);
+  if (!t?.subnotes?.[idx]) return;
+  const sn = t.subnotes[idx];
+  const item = document.getElementById(`sni-${id}-${idx}`);
+  if (item) {
+    item.className = `subnote-item${sn.done?' sn-done':''}`;
+    item.innerHTML = `
+      <div class="sn-bullet" onclick="toggleSubnote('${id}',${idx},event)">${sn.done?'✓':''}</div>
+      <span class="subnote-text">${escHtml(sn.text)}</span>
+      <button class="sn-edit" onclick="editSubnote('${id}',${idx},event)" title="Éditer">✏️</button>
+      <button class="sn-del"  onclick="deleteSubnote('${id}',${idx},event)" title="Supprimer">✕</button>`;
+  }
 }
 
 // ── SOUS-NOTES today list ──
@@ -3209,7 +4363,8 @@ function saveTiSubnote(tid, e) {
     item.innerHTML = `
       <div class="sn-bullet" onclick="toggleTiSubnote('${tid}',${i},event)"></div>
       <span class="subnote-text">${escHtml(text)}</span>
-      <button class="sn-del" onclick="deleteTiSubnote('${tid}',${i},event)">✕</button>`;
+      <button class="sn-edit" onclick="editTiSubnote('${tid}',${i},event)" title="Éditer">✏️</button>
+      <button class="sn-del"  onclick="deleteTiSubnote('${tid}',${i},event)" title="Supprimer">✕</button>`;
     list.appendChild(item);
   }
   inp.value = ''; inp.focus();
@@ -3234,6 +4389,60 @@ function deleteTiSubnote(tid, idx, e) {
   saveToday(); renderToday();
 }
 
+function editTiSubnote(tid, idx, e) {
+  if (e) e.stopPropagation();
+  const item = document.getElementById(`ti-sni-${tid}-${idx}`);
+  if (!item) return;
+  const t = todayTasks.find(x=>x.id===tid);
+  if (!t?.subnotes?.[idx]) return;
+  const sn = t.subnotes[idx];
+  item.innerHTML = `
+    <input class="sn-edit-input" id="ti-sni-edit-${tid}-${idx}" value="${escHtml(sn.text)}" />
+    <button class="subnote-ok"     onclick="saveTiSubnoteEdit('${tid}',${idx},event)">✓</button>
+    <button class="subnote-cancel" onclick="cancelTiSubnoteEdit('${tid}',${idx},event)">✕</button>`;
+  const inp = document.getElementById(`ti-sni-edit-${tid}-${idx}`);
+  inp?.focus(); inp?.select();
+  inp?.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { ev.preventDefault(); saveTiSubnoteEdit(tid, idx, ev); }
+    if (ev.key === 'Escape') { ev.preventDefault(); cancelTiSubnoteEdit(tid, idx, ev); }
+  });
+}
+function saveTiSubnoteEdit(tid, idx, e) {
+  if (e) e.stopPropagation();
+  const inp = document.getElementById(`ti-sni-edit-${tid}-${idx}`);
+  const text = inp?.value?.trim();
+  if (!text) { inp?.focus(); return; }
+  const t = todayTasks.find(x=>x.id===tid);
+  if (!t?.subnotes?.[idx]) return;
+  t.subnotes[idx].text = text;
+  saveToday();
+  const item = document.getElementById(`ti-sni-${tid}-${idx}`);
+  if (item) {
+    const done = t.subnotes[idx].done;
+    item.className = `subnote-item${done?' sn-done':''}`;
+    item.innerHTML = `
+      <div class="sn-bullet" onclick="toggleTiSubnote('${tid}',${idx},event)">${done?'✓':''}</div>
+      <span class="subnote-text">${escHtml(text)}</span>
+      <button class="sn-edit" onclick="editTiSubnote('${tid}',${idx},event)" title="Éditer">✏️</button>
+      <button class="sn-del"  onclick="deleteTiSubnote('${tid}',${idx},event)" title="Supprimer">✕</button>`;
+  }
+}
+function cancelTiSubnoteEdit(tid, idx, e) {
+  if (e) e.stopPropagation();
+  const t = todayTasks.find(x=>x.id===tid);
+  if (!t?.subnotes?.[idx]) return;
+  const sn = t.subnotes[idx];
+  const item = document.getElementById(`ti-sni-${tid}-${idx}`);
+  if (item) {
+    item.className = `subnote-item${sn.done?' sn-done':''}`;
+    item.innerHTML = `
+      <div class="sn-bullet" onclick="toggleTiSubnote('${tid}',${idx},event)">${sn.done?'✓':''}</div>
+      <span class="subnote-text">${escHtml(sn.text)}</span>
+      <button class="sn-edit" onclick="editTiSubnote('${tid}',${idx},event)" title="Éditer">✏️</button>
+      <button class="sn-del"  onclick="deleteTiSubnote('${tid}',${idx},event)" title="Supprimer">✕</button>`;
+  }
+}
+
 // ═══════════════════════════════════════════════
 //  SNOOZE — Archiver 1 semaine
 // ═══════════════════════════════════════════════
@@ -3245,7 +4454,8 @@ function archiveTask(id, e) {
   t.status = 'archived';
   t.archivedAt = Date.now();
   todayTasks = todayTasks.filter(x => x.originTaskId !== id);
-  save(); saveToday(); renderAll();
+  focusTasks = focusTasks.filter(x => x.originTaskId !== id);
+  save(); saveToday(); saveFocusList(); renderAll();
   toastWithUndo('🗃 Note archivée', () => {
     t.status = 'pending'; delete t.archivedAt;
     save(); renderAll();
@@ -3347,7 +4557,7 @@ function saveToServer(type) {
 
   const data = JSON.stringify({
     version: 3, exportedAt: new Date().toISOString(),
-    tasks, todayTasks, freeNotes,
+    tasks, todayTasks, focusTasks, freeNotes,
     layout: { quadOrder, quadSizes, quadCollapsed, snoozeSpanState }
   }, null, 2);
 
@@ -3396,7 +4606,7 @@ function saveToServer(type) {
 function runAutoSave() {
   const now = new Date();
   const data = {
-    tasks, todayTasks, freeNotes,
+    tasks, todayTasks, focusTasks, freeNotes,
     savedAt: now.toISOString(),
     label: now.toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }),
     version: 'auto-v1'
@@ -3483,6 +4693,86 @@ function checkMorningNotes(fromTabClick = false) {
   }
 }
 setInterval(() => checkMorningNotes(false), 60 * 1000); // vérifie chaque minute
+
+// ═══════════════════════════════════════════════
+//  TICKER GAUCHE — quotidiens & idées d'amélioration
+// ═══════════════════════════════════════════════
+let _tickerTimer  = null;
+let _tickerIdx    = 0;
+let _tickerActive = false;
+
+function getTickerItems() {
+  // Quotidiens (tâches du matin) — toujours présents dans le ticker
+  let quotidiens = [];
+  try {
+    const morning = getMorningTasks();
+    const liste = morning.length ? morning : DEFAULT_MORNING_TASKS;
+    quotidiens = liste.map(t => ({ text: t, type: 'morning' }));
+  } catch(e) {}
+  // Idées d'amélioration (protégé si freeIdeas pas encore initialisé)
+  let ideas = [];
+  try {
+    ideas = freeIdeas.map(i => ({
+      text: i.title + (i.desc ? ' — ' + i.desc : ''),
+      type: 'idea'
+    }));
+  } catch(e) {}
+  return [...quotidiens, ...ideas];
+}
+
+function initLeftTicker() {
+  if (_tickerActive) return;
+  const items = getTickerItems();
+  if (!items.length) return;
+  _tickerActive = true;
+  _tickerIdx = 0;
+  showTickerItem(items);
+}
+
+function showTickerItem(items) {
+  if (!items.length) return;
+  const container = document.getElementById('left-ticker');
+  if (!container) return;
+
+  // Nettoyer le précédent
+  container.innerHTML = '';
+
+  const item = items[_tickerIdx % items.length];
+  _tickerIdx++;
+
+  const card = document.createElement('div');
+  card.className = 'ticker-card ' + (item.type === 'idea' ? 'tc-idea' : 'tc-morning');
+  card.innerHTML = `
+    <span class="ticker-card-icon">${item.type === 'idea' ? '💡' : '☀️'}</span>
+    <div class="ticker-card-text">${escHtml(item.text)}</div>
+    <div class="ticker-card-type">${item.type === 'idea' ? 'Idée d\'amélioration' : 'Quotidien'}</div>`;
+
+  // Position de départ : top:0 — l'animation translateY gère tout le trajet
+  card.style.top = '0';
+  container.appendChild(card);
+
+  // Durée : 12s pour traverser tout l'écran (ajustable)
+  const duration = 12000;
+  card.style.animation = `tickerRise ${duration}ms linear forwards`;
+
+  // Quand l'animation est terminée → item sorti par le haut → afficher le suivant
+  card.addEventListener('animationend', () => {
+    card.remove();
+    // Rafraîchir la liste à chaque cycle complet
+    const fresh = getTickerItems();
+    if (!fresh.length) { _tickerActive = false; return; }
+    // Petite pause entre deux items (300ms)
+    _tickerTimer = setTimeout(() => showTickerItem(fresh), 300);
+  });
+}
+
+// Redémarre le ticker si de nouvelles idées sont ajoutées
+function refreshTicker() {
+  // Redémarre proprement si pas encore actif (ex: première idée ajoutée)
+  if (!_tickerActive) {
+    initLeftTicker();
+  }
+}
 
 // ── Sauvegarder layout + données avant fermeture ────────────────────────────
 window.addEventListener('beforeunload', function() {
@@ -3950,7 +5240,7 @@ function previewBackup(data, filename) {
   const backupToday = Array.isArray(data.todayTasks) ? data.todayTasks : [];
   const backupFreeNotes = Array.isArray(data.freeNotes) ? data.freeNotes : [];
 
-  restoreData = { tasks: backupTasks, todayTasks: backupToday, freeNotes: backupFreeNotes, meta: data };
+  restoreData = { tasks: backupTasks, todayTasks: backupToday, focusTasks: Array.isArray(data.focusTasks) ? data.focusTasks : [], freeNotes: backupFreeNotes, meta: data };
 
   const date   = data.exportedAt ? new Date(data.exportedAt).toLocaleString('fr-FR') : 'inconnue';
   const total  = backupTasks.length;
@@ -3983,8 +5273,9 @@ function applyRestore(mode) {
     if (!confirm(`⚠️ Remplacer TOUTES vos données actuelles par cette sauvegarde (${bTasks.length} tâches) ?\n\nCette action est irréversible.`)) return;
     tasks      = bTasks;
     todayTasks = bToday;
+    focusTasks = restoreData.focusTasks || [];
     freeNotes  = bFreeNotes;
-    save(); saveToday(); saveFreeNotes();
+    save(); saveToday(); saveFocusList(); saveFreeNotes();
     toast(`✅ Restauration complète — ${bTasks.length} tâches, ${bFreeNotes.length} notes libres`, 'success');
   } else {
     // Merge: add tasks that don't already exist (by id)
@@ -4243,9 +5534,11 @@ function openEdit(id, e) {
   const t = tasks.find(x=>x.id===id);
   if (!t) return;
   editingTaskId = id;
+  populateQuadSelects(); // s'assurer que les quadrants custom sont présents
   document.getElementById('modal-mode-label').textContent = 'Modifier la tâche';
   document.getElementById('modal-title').value = t.title;
   document.getElementById('modal-desc').value  = t.desc||'';
+  populateQuadSelects();
   document.getElementById('modal-quad').value  = t.quad;
   document.getElementById('modal-tag').value   = t.tag||'';
   document.getElementById('modal-due').value   = t.due||'';
@@ -4299,6 +5592,9 @@ function saveTask() {
     // Sync title in today items that reference this task
     const linked = todayTasks.filter(ti => ti.originTaskId === t.id);
     if (linked.length) { linked.forEach(ti => { ti.title = title; }); saveToday(); }
+    // Sync title in focus items that reference this task
+    const linkedF = focusTasks.filter(fi => fi.originTaskId === t.id);
+    if (linkedF.length) { linkedF.forEach(fi => { fi.title = title; }); saveFocusList(); if (currentView === 'focus') renderFocus(); }
   } else {
     pushHistory(`Ajout "${title}"`);
     tasks.push({ id:uid(), title, desc:document.getElementById('modal-desc').value,
@@ -4341,14 +5637,66 @@ function openMove(id, e) {
     if (!isCurrent) div.onclick = ()=>moveTask(key);
     opts.appendChild(div);
   });
+  // ── Custom quadrants (Amélioration, etc.) ──
+  customQuads.forEach(cq => {
+    const isCurrent = cq.id === t.quad;
+    const div = document.createElement('div');
+    div.className = `move-option${isCurrent?' disabled':''}`;
+    div.style.cssText = `border-left:3px solid ${cq.color};padding-left:10px;${isCurrent?'opacity:.45;cursor:default;':'cursor:pointer;'}`;
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.1rem">🔧</span>
+        <div>
+          <div style="font-weight:700;font-size:.85rem;color:${cq.color}">${cq.label}</div>
+          <div style="font-size:.72rem;opacity:.65;margin-top:1px">→ Matrice personnalisée${isCurrent?' <span style="color:var(--accent)">(actuel)</span>':''}</div>
+        </div>
+      </div>`;
+    if (!isCurrent) div.onclick = () => moveTask(cq.id);
+    opts.appendChild(div);
+  });
+  // ── Destination Aujourd'hui ☀️ ──
+  {
+    const already = todayTasks.some(td => td.originTaskId === t.id);
+    const div = document.createElement('div');
+    div.className = `move-option${already ? ' disabled' : ''}`;
+    div.style.cssText = `border-left:3px solid var(--gold);padding-left:10px;${already ? 'opacity:.45;cursor:default;' : 'cursor:pointer;'}`;
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.1rem">☀️</span>
+        <div>
+          <div style="font-weight:700;font-size:.85rem;color:var(--gold)">Aujourd'hui</div>
+          <div style="font-size:.72rem;opacity:.65;margin-top:1px">→ Ajouter à la liste du jour${already ? ' <span style="color:var(--accent)">(déjà dans le jour)</span>' : ''}</div>
+        </div>
+      </div>`;
+    if (!already) div.onclick = () => { closeMoveModal(); sendToToday(t.id); };
+    opts.appendChild(div);
+  }
+  // ── Destination Focus 🎯 ──
+  {
+    const already = focusTasks.some(f => f.originTaskId === t.id);
+    const div = document.createElement('div');
+    div.className = `move-option${already ? ' disabled' : ''}`;
+    div.style.cssText = `border-left:3px solid var(--gold);padding-left:10px;${already ? 'opacity:.45;cursor:default;' : 'cursor:pointer;'}`;
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.1rem">🎯</span>
+        <div>
+          <div style="font-weight:700;font-size:.85rem;color:var(--gold)">Focus</div>
+          <div style="font-size:.72rem;opacity:.65;margin-top:1px">→ Se concentrer sur cette tâche${already ? ' <span style="color:var(--accent)">(déjà en focus)</span>' : ''}</div>
+        </div>
+      </div>`;
+    if (!already) div.onclick = () => { closeMoveModal(); sendToFocus(t.id); };
+    opts.appendChild(div);
+  }
   document.getElementById('move-modal').classList.add('open');
 }
 function moveTask(toQuad) {
   const t = tasks.find(x=>x.id===moveTaskId); if (!t) return;
   t.quad = toQuad; save(); renderAll(); closeMoveModal();
-  toast(`Déplacée vers "${QUADS[toQuad].label}"`, 'info');
+  const label = QUADS[toQuad]?.label || customQuads.find(q=>q.id===toQuad)?.label || toQuad;
+  toast(`Déplacée vers "${label}"`, 'info');
 }
-function closeMoveModal() { document.getElementById('move-modal').classList.remove('open'); moveTaskId=null; }
+function closeMoveModal() { document.getElementById('move-modal').classList.remove('open'); moveTaskId=null; moveFocusId=null; }
 
 function deleteTask(id, e) {
   if (e) e.stopPropagation();
@@ -4359,7 +5707,8 @@ function deleteTask(id, e) {
   t.status    = 'deleted';
   t.deletedAt = Date.now();
   todayTasks  = todayTasks.filter(x => x.originTaskId !== id);
-  save(); saveToday(); renderAll();
+  focusTasks  = focusTasks.filter(x => x.originTaskId !== id);
+  save(); saveToday(); saveFocusList(); renderAll();
   toastWithUndo('🗑 Supprimée — récupérable 7 jours dans Archive', () => {
     t.status = 'pending'; delete t.deletedAt;
     save(); renderAll();
@@ -4412,12 +5761,39 @@ function applyQuadSizes() {
 }
 
 function resizeQuad(q, dir) {
-  const cur = quadSizes[q] ?? 3;
+  const cur = quadSizes[q] ?? 1;
   const next = Math.max(1, Math.min(5, cur + dir));
   if (next === cur) return;
   quadSizes[q] = next;
   localStorage.setItem(QUAD_SIZE_KEY, JSON.stringify(quadSizes));
   applyQuadSizes();
+}
+
+// ── Flèches de défilement dans les matrices ──────────────────────────────────
+function qScroll(q, dir) {
+  const body = document.getElementById('body-' + q);
+  if (!body) return;
+  body.scrollBy({ top: dir * 90, behavior: 'smooth' });
+}
+
+function qScrollUpdate(q) {
+  const body = document.getElementById('body-' + q);
+  const up   = document.getElementById('qsu-' + q);
+  const down = document.getElementById('qsd-' + q);
+  if (!body) return;
+  const atTop    = body.scrollTop <= 4;
+  const atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 4;
+  if (up)   up.classList.toggle('q-scroll-hidden', atTop);
+  if (down) down.classList.toggle('q-scroll-hidden', atBottom || body.scrollHeight <= body.clientHeight);
+}
+
+function qScrollInit(q) {
+  // Initialise l'état des flèches après rendu
+  setTimeout(() => qScrollUpdate(q), 50);
+}
+
+function qScrollInitAll() {
+  ['q1','q2','q3','q4', ...customQuads.map(c=>c.id)].forEach(q => qScrollInit(q));
 }
 
 function toggleCollapseQuad(q) {
@@ -4767,10 +6143,14 @@ document.addEventListener('keydown', e => {
   const aid = document.activeElement?.id || '';
   if (e.key==='Enter' && aid.startsWith('sni-input-'))    { e.preventDefault(); saveSubnote(aid.replace('sni-input-',''), e); return; }
   if (e.key==='Enter' && aid.startsWith('ti-sni-input-')) { e.preventDefault(); saveTiSubnote(aid.replace('ti-sni-input-',''), e); return; }
+  if (e.key==='Enter' && aid.startsWith('tci-'))          { e.preventDefault(); saveTiInlineComment(aid.replace('tci-',''), e); return; }
   if (e.key==='Escape' && aid.startsWith('sni-input-'))    { closeSubnoteForm(aid.replace('sni-input-',''), e); return; }
   if (e.key==='Escape' && aid.startsWith('ti-sni-input-')) { closeTiSubnoteForm(aid.replace('ti-sni-input-',''), e); return; }
+  if (e.key==='Escape' && aid.startsWith('tci-'))          { toggleTiCommentForm(aid.replace('tci-','')); return; }
+  if (e.ctrlKey && e.key==='Enter' && aid==='ti-comment-text') { e.preventDefault(); saveTiComment(); return; }
   if (e.ctrlKey && e.key==='1') switchView('matrice');
   if (e.ctrlKey && e.key==='2') switchView('today');
+  if (e.ctrlKey && e.key==='3') switchView('focus');
 });
 
 [['task-modal',closeModal],['move-modal',closeMoveModal],['archive-overlay',closeArchive],
@@ -4946,11 +6326,8 @@ function toggleMaximizeQuad(q) {
     // Restore
     const overlay = document.getElementById('quad-maximize-overlay');
     if (overlay) {
-      const el = document.getElementById('quad-'+q);
-      const main = document.querySelector('#view-matrice main');
-      if (el && main) main.appendChild(el);
       if (overlay._escHandler) document.removeEventListener('keydown', overlay._escHandler);
-      overlay.remove();
+      overlay.remove(); // renderAll() will rebuild the quad in the right container
     }
     maximizedQuad = null;
     renderAll(); applyQuadOrder(); applyQuadSizes();
@@ -5010,7 +6387,16 @@ function updateMatrixBulkBar() {
   if (!bar) return;
   const n = matrixSelected.size;
   bar.style.display = (matrixSelectMode && n > 0) ? 'flex' : 'none';
+  bar.style.flexDirection = 'column';
   if (lbl) lbl.textContent = `${n} sélectionnée${n > 1 ? 's' : ''}`;
+  // Boutons custom quads (Amélioration, etc.) — dynamiques
+  const cqContainer = document.getElementById('bulk-custom-quads');
+  if (cqContainer) {
+    cqContainer.innerHTML = customQuads.map(cq =>
+      `<button class="mbulk-btn" onclick="bulkMoveMatrix('${cq.id}')"
+        style="border-color:${cq.color};color:${cq.color}">${cq.label}</button>`
+    ).join('');
+  }
 }
 
 function selectAllInQuad(q) {
@@ -5022,11 +6408,12 @@ function selectAllInQuad(q) {
 // Bulk actions
 function bulkMoveMatrix(q) {
   if (!matrixSelected.size) return;
-  pushHistory(`Déplacement groupé → ${QUADS[q].label.split('—')[0]}`);
+  const label = QUADS[q]?.label.split('—')[0] || customQuads.find(cq=>cq.id===q)?.label || q;
+  pushHistory(`Déplacement groupé → ${label}`);
   tasks.forEach(t => { if (matrixSelected.has(t.id)) t.quad = q; });
   matrixSelected.clear();
   save(); renderAll(); updateMatrixBulkBar();
-  toast(`Déplacées → ${QUADS[q].label.split('—')[0]} ✓`, 'success');
+  toast(`Déplacées → ${label} ✓`, 'success');
 }
 
 function bulkSendToToday() {
@@ -5075,6 +6462,145 @@ function bulkDeleteMatrix() {
   matrixSelected.clear();
   save(); saveToday(); renderAll(); updateMatrixBulkBar();
   toast(`🗑 ${n} note${n>1?'s':''} dans la corbeille`, 'info');
+}
+
+// ═══════════════════════════════════════════════
+//  DOUBLONS — Détection & Fusion
+// ═══════════════════════════════════════════════
+let _dupGroups = []; // groupes de doublons en cours d'analyse
+
+function _normTitle(t) { return t.trim().toLowerCase().replace(/\s+/g,' '); }
+
+function _getDupGroups() {
+  const active = tasks.filter(t => t.status !== 'deleted' && t.status !== 'archived');
+  const map = {};
+  active.forEach(t => {
+    const key = _normTitle(t.title);
+    if (!map[key]) map[key] = [];
+    map[key].push(t);
+  });
+  return Object.values(map).filter(g => g.length > 1)
+    .map(g => g.sort((a,b) => (b.createdAt||0) - (a.createdAt||0))); // plus récent en premier
+}
+
+function openDuplicatesModal() {
+  _dupGroups = _getDupGroups();
+  const badge = document.getElementById('dup-count-badge');
+  const btn   = document.getElementById('dup-merge-all-btn');
+  if (badge) badge.textContent = _dupGroups.length
+    ? `${_dupGroups.length} groupe${_dupGroups.length>1?'s':''} trouvé${_dupGroups.length>1?'s':''}`
+    : '';
+  if (btn) btn.style.display = _dupGroups.length ? '' : 'none';
+  renderDuplicateGroups();
+  document.getElementById('duplicates-modal').style.display = 'flex';
+}
+function closeDuplicatesModal() {
+  document.getElementById('duplicates-modal').style.display = 'none';
+  _dupGroups = [];
+}
+
+function renderDuplicateGroups() {
+  const content = document.getElementById('duplicates-content');
+  if (!content) return;
+  if (!_dupGroups.length) {
+    content.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text3);font-size:.88rem;">
+      <div style="font-size:2rem;margin-bottom:8px;">✅</div>Aucun doublon détecté !</div>`;
+    return;
+  }
+  content.innerHTML = _dupGroups.map((group, gi) => {
+    const qInfo = id => QUADS[id] || customQuads.find(q=>q.id===id) || {icon:'📌',label:id};
+    const rows = group.map((t, ti) => {
+      const q = qInfo(t.quad);
+      const notes  = (t.comments||[]).length + (t.subnotes||[]).length;
+      const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : '';
+      const isKeep  = ti === 0; // première (plus récente) = gardée par défaut
+      return `<div class="dup-row${isKeep?' dup-keep':''}" data-gi="${gi}" data-ti="${ti}"
+          style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;
+            background:${isKeep?'rgba(63,185,80,.08)':'var(--bg4)'};
+            border:1px solid ${isKeep?'rgba(63,185,80,.3)':'var(--border)'};cursor:pointer;"
+          onclick="toggleDupKeep(${gi},${ti})">
+        <span style="font-size:.65rem;font-weight:700;padding:2px 6px;border-radius:4px;
+          background:${isKeep?'rgba(63,185,80,.2)':'var(--bg3)'};
+          color:${isKeep?'var(--q2-color)':'var(--text3)'};">${isKeep?'GARDER':'SUPPR.'}</span>
+        <span style="font-size:.78rem;color:var(--text2);flex-shrink:0;">${q.icon} ${(q.label||'').split('—')[0].trim()}</span>
+        <span style="font-size:.82rem;color:var(--text);flex:1;line-height:1.4;">${escHtml(t.title)}</span>
+        <span style="font-size:.7rem;color:var(--text3);flex-shrink:0;">${dateStr}${notes?` · ${notes} note${notes>1?'s':''}`:''}</span>
+      </div>`;
+    }).join('');
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);">
+        <span style="font-size:.78rem;color:#a78bfa;font-weight:700;">🔀 ${group.length} en double</span>
+        <button class="sync-btn" onclick="mergeGroup(${gi})" style="font-size:.72rem;padding:3px 10px;background:rgba(167,139,250,.15);border-color:rgba(167,139,250,.4);color:#a78bfa;">Fusionner ce groupe</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:10px;">
+        ${rows}
+      </div>
+      <div style="padding:6px 10px 8px;font-size:.68rem;color:var(--text3);">💡 Cliquer sur une ligne pour choisir laquelle garder</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDupKeep(gi, ti) {
+  const group = _dupGroups[gi];
+  if (!group) return;
+  // Swap : mettre la ligne cliquée en position 0 (= la gardée)
+  const [chosen] = group.splice(ti, 1);
+  group.unshift(chosen);
+  renderDuplicateGroups();
+}
+
+function mergeGroup(gi) {
+  const group = _dupGroups[gi];
+  if (!group || group.length < 2) return;
+  pushHistory(`Fusion doublons "${group[0].title}"`);
+  const keep = group[0];
+  // Fusionner notes, subnotes, comments des doublons dans la tâche gardée
+  for (let i = 1; i < group.length; i++) {
+    const dup = group[i];
+    if (dup.comments?.length) keep.comments = [...(keep.comments||[]), ...dup.comments];
+    if (dup.subnotes?.length) keep.subnotes = [...(keep.subnotes||[]), ...dup.subnotes];
+    // Marquer le doublon supprimé
+    dup.status = 'deleted'; dup.deletedAt = Date.now();
+    delete dup.inToday;
+    // Nettoyer le doublon de la liste today s'il y est
+    todayTasks = todayTasks.filter(td => td.originTaskId !== dup.id);
+  }
+  save(); saveToday(); renderAll();
+  // Retirer ce groupe et re-rendre
+  _dupGroups.splice(gi, 1);
+  const badge = document.getElementById('dup-count-badge');
+  if (badge) badge.textContent = _dupGroups.length
+    ? `${_dupGroups.length} groupe${_dupGroups.length>1?'s':''} restant${_dupGroups.length>1?'s':''}`
+    : 'Terminé !';
+  const btn = document.getElementById('dup-merge-all-btn');
+  if (btn) btn.style.display = _dupGroups.length ? '' : 'none';
+  renderDuplicateGroups();
+  toast(`✅ "${keep.title}" — doublons fusionnés`, 'success');
+}
+
+function mergeAllDuplicates() {
+  if (!_dupGroups.length) return;
+  const total = _dupGroups.reduce((s, g) => s + g.length - 1, 0);
+  pushHistory(`Fusion tous doublons (${total} supprimées)`);
+  _dupGroups.forEach((group) => {
+    const keep = group[0];
+    for (let i = 1; i < group.length; i++) {
+      const dup = group[i];
+      if (dup.comments?.length) keep.comments = [...(keep.comments||[]), ...dup.comments];
+      if (dup.subnotes?.length) keep.subnotes = [...(keep.subnotes||[]), ...dup.subnotes];
+      dup.status = 'deleted'; dup.deletedAt = Date.now();
+      delete dup.inToday;
+      todayTasks = todayTasks.filter(td => td.originTaskId !== dup.id);
+    }
+  });
+  _dupGroups = [];
+  save(); saveToday(); renderAll();
+  const badge = document.getElementById('dup-count-badge');
+  if (badge) badge.textContent = 'Terminé !';
+  const btn = document.getElementById('dup-merge-all-btn');
+  if (btn) btn.style.display = 'none';
+  renderDuplicateGroups();
+  toast(`✅ ${total} doublon${total>1?'s':''} fusionné${total>1?'s':''} !`, 'success');
 }
 
 // ═══════════════════════════════════════════════
@@ -5254,11 +6780,16 @@ loadDemoIfEmpty();
 loadTodayDemoIfEmpty();
 renderAll();
 applyQuadOrder();
+
+// ── Sync serveur au démarrage + toutes les 30 s ──
+serverPull();
+setInterval(serverPull, 30000);
 applyQuadSizes();
 checkAutoSave();
 checkMorningNotes();
 updateLoginHeader();
 updateFreeNotesBadge();
+initLeftTicker();
 setTimeout(checkStaleDoneTasks, 600);
 
 // Garantir la sauvegarde des notes avant fermeture/rechargement de page
@@ -5269,6 +6800,7 @@ window.addEventListener('beforeunload', () => {
 let _saveNoteTimer = null;
 function saveFreeNotes() {
   localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
+  scheduleServerPush();
   updateFreeNotesBadge();
   // Indicateur visuel discret "✓ Sauvegardé"
   clearTimeout(_saveNoteTimer);
@@ -5437,7 +6969,7 @@ function renderFreeNotes() {
         </div>
         <div class="free-note-body" id="fn-body-${n.id}"
              contenteditable="true" data-placeholder="Écrivez votre note ici…"
-             oninput="updateFreeNote('${n.id}','body',this.innerHTML)">${n.body||''}</div>
+             oninput="updateFreeNote('${n.id}','body',this.innerHTML)"></div>
         <div class="fn-subnotes" id="fn-snl-${n.id}">${snHtml}</div>
         <div class="fn-add-sn-form" id="fn-snf-${n.id}">
           <input class="fn-add-sn-input" id="fn-sni-${n.id}" placeholder="Ajouter une sous-note…" />
@@ -5459,8 +6991,10 @@ function renderFreeNotes() {
         </div>
       </div>
       <div class="fn-resize-handle" title="Redimensionner">⊞</div>`;
-    // Scroll fluide dans le corps de la note
+    // Injecter le contenu du corps séparément (évite que du HTML dans n.body casse le template)
     const ta = card.querySelector('.free-note-body');
+    if (ta && n.body) ta.innerHTML = n.body;
+    // Scroll fluide dans le corps de la note
     if (ta) {
       ta.addEventListener('wheel', e => {
         const atTop    = ta.scrollTop === 0 && e.deltaY < 0;
@@ -5494,6 +7028,44 @@ function renderFreeNotes() {
 // ══════════════════════════════════════════════════════════
 let _noteZCounter = 200;
 
+// État global de drag/resize — UN SEUL handler sur document (évite accumulation)
+let _noteDrag = null;
+
+document.addEventListener('mousemove', e => {
+  if (!_noteDrag) return;
+  if (_noteDrag.type === 'drag') {
+    const newLeft = Math.max(0, _noteDrag.startLeft + (e.clientX - _noteDrag.startX));
+    const newTop  = Math.max(0, _noteDrag.startTop  + (e.clientY - _noteDrag.startY));
+    _noteDrag.card.style.left = newLeft + 'px';
+    _noteDrag.card.style.top  = newTop  + 'px';
+    updateNotesCanvasSize();
+  } else {
+    const newW = Math.max(260, _noteDrag.startW + (e.clientX - _noteDrag.startX));
+    const newH = Math.max(180, _noteDrag.startH + (e.clientY - _noteDrag.startY));
+    _noteDrag.card.style.width  = newW + 'px';
+    _noteDrag.card.style.height = newH + 'px';
+    updateNotesCanvasSize();
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (!_noteDrag) return;
+  const st = _noteDrag;
+  _noteDrag = null;
+  if (st.type === 'drag') {
+    st.card.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    st.n.x = parseInt(st.card.style.left) || 0;
+    st.n.y = parseInt(st.card.style.top)  || 0;
+  } else {
+    document.body.style.userSelect = '';
+    document.body.style.cursor     = '';
+    st.n.w = parseInt(st.card.style.width)  || 320;
+    st.n.h = parseInt(st.card.style.height) || 260;
+  }
+  saveFreeNotes();
+});
+
 function bringNoteToFront(card, n) {
   _noteZCounter++;
   card.style.zIndex = _noteZCounter;
@@ -5514,80 +7086,32 @@ function updateNotesCanvasSize() {
 function makeDraggableNote(card, n) {
   const handle = card.querySelector('.fn-drag-handle');
   if (!handle) return;
-  let startX, startY, startLeft, startTop, dragging = false;
-
   handle.addEventListener('mousedown', e => {
-    if (e.button !== 0) return;
-    if (e.target.closest('input, button, [contenteditable]')) return;
+    if (e.button !== 0 || e.target.closest('input, button, [contenteditable]')) return;
     e.preventDefault();
-    dragging    = true;
-    startX      = e.clientX;
-    startY      = e.clientY;
-    startLeft   = parseInt(card.style.left)  || 0;
-    startTop    = parseInt(card.style.top)   || 0;
     bringNoteToFront(card, n);
     card.classList.add('dragging');
     document.body.style.userSelect = 'none';
-  });
-
-  document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    const newLeft = Math.max(0, startLeft + dx);
-    const newTop  = Math.max(0, startTop  + dy);
-    card.style.left = newLeft + 'px';
-    card.style.top  = newTop  + 'px';
-    updateNotesCanvasSize();
-  });
-
-  document.addEventListener('mouseup', e => {
-    if (!dragging) return;
-    dragging = false;
-    card.classList.remove('dragging');
-    document.body.style.userSelect = '';
-    n.x = parseInt(card.style.left)  || 0;
-    n.y = parseInt(card.style.top)   || 0;
-    saveFreeNotes();
+    _noteDrag = { type:'drag', card, n,
+      startX: e.clientX, startY: e.clientY,
+      startLeft: parseInt(card.style.left) || 0,
+      startTop:  parseInt(card.style.top)  || 0 };
   });
 }
 
 function makeResizableNote(card, n) {
   const handle = card.querySelector('.fn-resize-handle');
   if (!handle) return;
-  let startX, startY, startW, startH, resizing = false;
-
   handle.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
-    resizing = true;
-    startX   = e.clientX;
-    startY   = e.clientY;
-    startW   = card.offsetWidth;
-    startH   = card.offsetHeight;
     bringNoteToFront(card, n);
     document.body.style.userSelect = 'none';
     document.body.style.cursor     = 'nwse-resize';
-  });
-
-  document.addEventListener('mousemove', e => {
-    if (!resizing) return;
-    const newW = Math.max(260, startW + (e.clientX - startX));
-    const newH = Math.max(180, startH + (e.clientY - startY));
-    card.style.width  = newW + 'px';
-    card.style.height = newH + 'px';
-    updateNotesCanvasSize();
-  });
-
-  document.addEventListener('mouseup', e => {
-    if (!resizing) return;
-    resizing = false;
-    document.body.style.userSelect = '';
-    document.body.style.cursor     = '';
-    n.w = parseInt(card.style.width)  || 320;
-    n.h = parseInt(card.style.height) || 260;
-    saveFreeNotes();
+    _noteDrag = { type:'resize', card, n,
+      startX: e.clientX, startY: e.clientY,
+      startW: card.offsetWidth, startH: card.offsetHeight };
   });
 }
 
@@ -5718,12 +7242,47 @@ document.addEventListener('DOMContentLoaded', () => {
     customQuads.push({ id: BUILTIN_ID, label: '🔧 Amélioration', color: '#0ea5e9' });
     localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
   }
+  const PLANNED_ID = 'builtin-planned';
+  if (!customQuads.find(q => q.id === PLANNED_ID)) {
+    customQuads.push({ id: PLANNED_ID, label: '📅 Déjà Planifié', color: '#a78bfa' });
+    localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
+  }
+  // Populer les selects dès que le DOM est prêt
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', populateQuadSelects);
+  } else {
+    populateQuadSelects();
+  }
 })();
 
 let selectedQuadColor = '#9c59d1';
 
 function saveCustomQuads() {
   localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
+  populateQuadSelects();
+}
+
+// ── Populer dynamiquement tous les <select> de quadrant ──────────────────────
+function populateQuadSelects() {
+  const baseOptions = [
+    { value:'q1', label:'⚡ Q1 — Urgent & Important · Faire maintenant' },
+    { value:'q2', label:'📅 Q2 — Important & Non Urgent · Planifier' },
+    { value:'q3', label:'🤝 Q3 — Urgent & Non Important · Déléguer' },
+    { value:'q4', label:'🗑️ Q4 — Non Urgent & Non Important · Éliminer' },
+  ];
+  const customOptions = customQuads.map(cq => ({ value: cq.id, label: cq.label }));
+  const allOptions = [...baseOptions, ...customOptions];
+
+  ['quick-quad', 'modal-quad'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const current = sel.value; // conserver la sélection en cours
+    sel.innerHTML = allOptions
+      .map(o => `<option value="${o.value}">${o.label}</option>`)
+      .join('');
+    // Restaurer la valeur si elle existe toujours
+    if (allOptions.find(o => o.value === current)) sel.value = current;
+  });
 }
 
 function openAddQuadModal() {
@@ -5745,7 +7304,7 @@ function confirmAddQuad() {
   if (!name) { toast('Entre un nom pour la matrice', 'error'); return; }
   const id = 'cq' + Date.now();
   customQuads.push({ id, label: name, color: selectedQuadColor });
-  saveCustomQuads();
+  saveCustomQuads(); // appelle déjà populateQuadSelects()
   closeAddQuadModal();
   renderCustomQuads();
   toast(`Matrice "${name}" créée ✓`, 'success');
@@ -5756,12 +7315,19 @@ function deleteCustomQuad(id) {
   customQuads = customQuads.filter(q => q.id !== id);
   save(); saveCustomQuads(); renderAll(); renderCustomQuads();
 }
-function renderCustomQuads() {
+function renderCustomQuads(filtered) {
+  populateQuadSelects();
+  // Si appelée sans argument (ex: depuis drag/drop), recalculer le filtre
+  if (!filtered) filtered = getFiltered();
   const row = document.getElementById('custom-quads-row');
   if (!row) return;
   row.innerHTML = '';
-  customQuads.forEach(cq => {
-    const shown = tasks.filter(t => t.quad === cq.id && t.status !== 'archived' && t.status !== 'deleted' && !t.inToday);
+  customQuads.forEach((cq, idx) => {
+    const allInCQ   = tasks.filter(t => t.quad === cq.id && t.status !== 'archived' && t.status !== 'deleted');
+    const shown     = filtered.filter(t => t.quad === cq.id);
+    const doneCount = allInCQ.filter(t => t.status === 'done').length;
+    const progPct   = allInCQ.length ? Math.round(doneCount / allInCQ.length * 100) : 0;
+
     const div = document.createElement('div');
     div.className = 'quadrant';
     div.id = 'quad-' + cq.id;
@@ -5769,23 +7335,38 @@ function renderCustomQuads() {
     if (quadCollapsed[cq.id]) div.classList.add('q-collapsed');
     div.style.cssText = `flex:1;min-width:260px;border-top:3px solid ${cq.color};`;
     div.innerHTML = `
-      <div class="q-header">
-        <div class="q-title" style="color:${cq.color}">${cq.label}</div>
-        <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
-          <span class="q-cnt" style="background:${cq.color}22;color:${cq.color}">${shown.length}</span>
+      <div class="q-progress"><div class="q-progress-fill" id="prog-${cq.id}" style="background:${cq.color};width:${progPct}%"></div></div>
+      <div class="quadrant-header">
+        <div class="q-title-wrap">
+          <div class="q-title" style="color:${cq.color}">${cq.label}</div>
+        </div>
+        <span class="q-count" id="cnt-${cq.id}" style="background:${cq.color}22;color:${cq.color}">${shown.length}</span>
+        <div class="q-controls">
+          <button class="q-ctrl-btn" onclick="moveCQ('${cq.id}',-1)" title="Déplacer à gauche / en haut">◄</button>
+          <button class="q-ctrl-btn" onclick="moveCQ('${cq.id}',-1)" title="Déplacer en haut">▲</button>
+          <button class="q-ctrl-btn" onclick="moveCQ('${cq.id}',+1)" title="Déplacer en bas">▼</button>
+          <button class="q-ctrl-btn" onclick="moveCQ('${cq.id}',+1)" title="Déplacer à droite / en bas">►</button>
+          <span class="q-ctrl-separator"></span>
           <button class="q-ctrl-btn" onclick="resizeCQ('${cq.id}',-1)" title="Réduire la hauteur">−</button>
           <button class="q-ctrl-btn" onclick="resizeCQ('${cq.id}',+1)" title="Augmenter la hauteur">＋</button>
+          <span class="q-ctrl-separator"></span>
           <button class="q-ctrl-btn q-collapse-btn" id="qcollapse-${cq.id}" onclick="collapseCQ('${cq.id}')" title="Réduire / Agrandir">${quadCollapsed[cq.id]?'⊞':'⊟'}</button>
-          <button class="q-ctrl-btn q-add-btn" onclick="openQuadAdd('${cq.id}')" style="color:${cq.color}">＋</button>
+          <span class="q-ctrl-separator"></span>
+          <button class="q-ctrl-btn q-add-btn" onclick="openQuadAdd('${cq.id}')" title="Ajouter une tâche ici" style="color:${cq.color}">＋</button>
+          <button class="q-ctrl-btn q-maximize-btn" onclick="toggleMaximizeQuad('${cq.id}')" title="Plein écran">⤢</button>
           <button class="q-ctrl-btn" onclick="deleteCustomQuad('${cq.id}')" style="color:var(--text3);font-size:.7rem;" title="Supprimer la matrice">✕</button>
         </div>
       </div>
       <div class="q-inline-add" id="qadd-${cq.id}">
         <input class="q-inline-input" id="qi-${cq.id}" placeholder="Titre de la tâche…" />
-        <button class="subnote-ok" onclick="submitQuadAdd('${cq.id}')">＋ OK</button>
-        <button class="subnote-cancel" onclick="closeQuadAdd('${cq.id}')">✕</button>
+        <button class="q-inline-btn" onclick="submitQuadAdd('${cq.id}')">＋ OK</button>
+        <button class="q-inline-close" onclick="closeQuadAdd('${cq.id}')">✕</button>
       </div>
-      <div class="q-body" id="body-${cq.id}"></div>`;
+      <div class="q-body-wrap">
+        <button class="q-scroll-btn q-scroll-up q-scroll-hidden" id="qsu-${cq.id}" onclick="qScroll('${cq.id}',-1)">▲</button>
+        <div class="q-body" id="body-${cq.id}" onscroll="qScrollUpdate('${cq.id}')"></div>
+        <button class="q-scroll-btn q-scroll-down q-scroll-hidden" id="qsd-${cq.id}" onclick="qScroll('${cq.id}',1)">▼</button>
+      </div>`;
     // Drag-drop support
     div.addEventListener('dragover', e => { e.preventDefault(); div.classList.add('drag-over'); });
     div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
@@ -5828,6 +7409,17 @@ function collapseCQ(id) {
   const btn = document.getElementById('qcollapse-' + id);
   if (el)  el.classList.toggle('q-collapsed', quadCollapsed[id]);
   if (btn) btn.textContent = quadCollapsed[id] ? '⊞' : '⊟';
+}
+
+// Déplacer une matrice custom dans la liste (◄▲ = -1, ▼► = +1)
+function moveCQ(id, dir) {
+  const i = customQuads.findIndex(q => q.id === id);
+  if (i === -1) return;
+  const j = i + dir;
+  if (j < 0 || j >= customQuads.length) return;
+  [customQuads[i], customQuads[j]] = [customQuads[j], customQuads[i]];
+  saveCustomQuads();
+  renderCustomQuads();
 }
 
 function getQuadInfo(quadId) {
@@ -5961,12 +7553,13 @@ function deployToGitHub() {
   </div>
 </div>
 <!-- ═══════════ BOUTON IDÉE D'AMÉLIORATION ═══════════ -->
-<button id="comment-fab" onclick="toggleCommentPanel()" title="Idées d'amélioration"
+<button id="comment-fab" title="Les Quotidiens (glisser pour déplacer)"
   style="position:fixed;bottom:90px;right:22px;z-index:400;
-    width:46px;height:46px;border-radius:50%;border:none;cursor:pointer;
+    width:46px;height:46px;border-radius:50%;border:none;cursor:grab;
     background:linear-gradient(135deg,#0ea5e9,#0284c7);
     color:#fff;font-size:1.3rem;box-shadow:0 4px 14px rgba(14,165,233,.45);
-    display:flex;align-items:center;justify-content:center;transition:transform .2s;">💡</button>
+    display:flex;align-items:center;justify-content:center;transition:transform .2s,box-shadow .2s;
+    touch-action:none;user-select:none;">💡</button>
 
 <div id="comment-panel"
   style="display:none;position:fixed;bottom:145px;right:22px;z-index:401;
@@ -5980,7 +7573,7 @@ function deployToGitHub() {
     padding:12px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0;
     background:var(--bg3);">
     <span style="font-size:.85rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:6px;">
-      💡 Idées d'amélioration
+      📋 Les Quotidiens
       <span id="idea-count-badge" style="font-size:.68rem;background:var(--bg4);border:1px solid var(--border);
         border-radius:8px;padding:1px 7px;color:var(--text3);font-weight:400;"></span>
     </span>
@@ -6017,22 +7610,51 @@ function toggleCommentPanel() {
   panel.style.display = open ? 'none' : 'flex';
   fab.style.transform  = open ? '' : 'rotate(15deg) scale(1.08)';
   if (!open) {
+    _positionCommentPanel();
     renderCommentIdeas();
     setTimeout(() => document.getElementById('comment-input')?.focus(), 60);
   }
+}
+
+function _positionCommentPanel() {
+  const fab   = document.getElementById('comment-fab');
+  const panel = document.getElementById('comment-panel');
+  if (!fab || !panel) return;
+  const rect = fab.getBoundingClientRect();
+  const panelW = Math.min(340, window.innerWidth * 0.93);
+  // Aligner à droite sur le FAB, au-dessus
+  let right  = window.innerWidth - rect.right;
+  right = Math.max(8, Math.min(right, window.innerWidth - panelW - 8));
+  const bottom = window.innerHeight - rect.top + 8;
+  panel.style.right  = right + 'px';
+  panel.style.bottom = Math.max(8, bottom) + 'px';
+  panel.style.left = '';
+  panel.style.top  = '';
+}
+
+// ── Idées d'amélioration — stockage SÉPARÉ des tâches ───────────────────────
+const IDEAS_KEY = 'taskflow_free_ideas';
+let freeIdeas = (() => {
+  try { return JSON.parse(localStorage.getItem(IDEAS_KEY) || '[]'); }
+  catch(e) { return []; }
+})();
+
+function saveIdeas() {
+  localStorage.setItem(IDEAS_KEY, JSON.stringify(freeIdeas));
+  const badge = document.getElementById('idea-count-badge');
+  const fab   = document.getElementById('comment-fab');
+  const count = freeIdeas.length;
+  if (badge) badge.textContent = count ? count + ' idée' + (count > 1 ? 's' : '') : '';
+  refreshTicker();
 }
 
 function saveCommentIdea() {
   const inp   = document.getElementById('comment-input');
   const title = cap(inp.value.trim());
   if (!title) { inp.focus(); inp.style.borderColor='var(--q1-color)'; setTimeout(()=>inp.style.borderColor='',900); return; }
-  const desc   = document.getElementById('comment-body').value.trim();
-  const quadId = 'builtin-amelioration';
-  manualSortQuads.add(quadId);
-  localStorage.setItem('taskflow_manualsort', JSON.stringify([...manualSortQuads]));
-  tasks.push({ id:uid(), title, desc, quad:quadId, tag:'', due:'', status:'pending',
-    comments:[], subnotes:[], createdAt:Date.now() });
-  save(); renderAll();
+  const desc = document.getElementById('comment-body').value.trim();
+  freeIdeas.unshift({ id: uid(), title, desc, createdAt: Date.now() });
+  saveIdeas();
   inp.value = '';
   document.getElementById('comment-body').value = '';
   inp.focus();
@@ -6044,37 +7666,183 @@ function renderCommentIdeas() {
   const list  = document.getElementById('comment-ideas-list');
   const badge = document.getElementById('idea-count-badge');
   if (!list) return;
-  const ideas = tasks.filter(t => t.quad === 'builtin-amelioration' && t.status !== 'deleted')
-                     .sort((a,b) => b.createdAt - a.createdAt);
-  if (badge) badge.textContent = ideas.length ? ideas.length + ' idée' + (ideas.length>1?'s':'') : '';
-  if (!ideas.length) {
+  if (badge) badge.textContent = freeIdeas.length ? freeIdeas.length + ' idée' + (freeIdeas.length>1?'s':'') : '';
+  if (!freeIdeas.length) {
     list.innerHTML = `<div style="text-align:center;padding:20px 0;color:var(--text3);font-size:.8rem;">
       <div style="font-size:1.8rem;margin-bottom:6px;">💡</div>Aucune idée pour l'instant</div>`;
     return;
   }
-  list.innerHTML = ideas.map(t => `
-    <div style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid #0ea5e9;
-      border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:4px;position:relative;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-        <span style="font-size:.82rem;font-weight:600;color:var(--text);flex:1;line-height:1.4;">${escHtml(t.title)}</span>
-        <button onclick="deleteCommentIdea('${t.id}')"
-          style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.75rem;
-            padding:1px 4px;border-radius:3px;flex-shrink:0;transition:color .12s;"
-          onmouseover="this.style.color='var(--q1-color)'" onmouseout="this.style.color='var(--text3)'"
-          title="Supprimer">✕</button>
+  list.innerHTML = freeIdeas.map(idea => `
+    <div id="idea-card-${idea.id}" style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid #0ea5e9;
+      border-radius:8px;padding:9px 11px;display:flex;flex-direction:column;gap:5px;">
+      <!-- Mode lecture -->
+      <div class="idea-view-${idea.id}" style="display:flex;flex-direction:column;gap:4px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+          <span style="font-size:.82rem;font-weight:600;color:var(--text);flex:1;line-height:1.4;">${escHtml(idea.title)}</span>
+          <div style="display:flex;gap:3px;flex-shrink:0;">
+            <button onclick="openIdeaEdit('${idea.id}')"
+              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.72rem;
+                padding:2px 5px;border-radius:3px;transition:color .12s;"
+              onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text3)'"
+              title="Modifier">✏️</button>
+            <button onclick="deleteCommentIdea('${idea.id}')"
+              style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:.72rem;
+                padding:2px 5px;border-radius:3px;transition:color .12s;"
+              onmouseover="this.style.color='var(--q1-color)'" onmouseout="this.style.color='var(--text3)'"
+              title="Supprimer">✕</button>
+          </div>
+        </div>
+        ${idea.desc ? `<div style="font-size:.75rem;color:var(--text2);line-height:1.5;">${escHtml(idea.desc)}</div>` : ''}
+        <div style="font-size:.63rem;color:var(--text3);">${new Date(idea.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
       </div>
-      ${t.desc ? `<div style="font-size:.75rem;color:var(--text2);line-height:1.5;">${escHtml(t.desc)}</div>` : ''}
-      <div style="font-size:.65rem;color:var(--text3);">${new Date(t.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+      <!-- Mode édition -->
+      <div class="idea-edit-${idea.id}" style="display:none;flex-direction:column;gap:6px;">
+        <input id="idea-edit-title-${idea.id}" class="sync-input" value="${escHtml(idea.title)}"
+          style="font-size:.82rem;font-weight:600;"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();saveIdeaEdit('${idea.id}');}if(event.key==='Escape')closeIdeaEdit('${idea.id}');" />
+        <textarea id="idea-edit-desc-${idea.id}" class="sync-input" rows="2"
+          style="resize:vertical;font-family:inherit;font-size:.78rem;line-height:1.5;"
+          onkeydown="if(event.key==='Escape')closeIdeaEdit('${idea.id}');"
+          placeholder="Détails (optionnel)…">${escHtml(idea.desc||'')}</textarea>
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button class="sync-btn" onclick="closeIdeaEdit('${idea.id}')" style="font-size:.75rem;padding:4px 10px;">Annuler</button>
+          <button class="sync-btn primary" onclick="saveIdeaEdit('${idea.id}')" style="font-size:.75rem;padding:4px 10px;">✓ Enregistrer</button>
+        </div>
+      </div>
     </div>`).join('');
 }
 
+function openIdeaEdit(id) {
+  const card = document.getElementById('idea-card-' + id);
+  if (!card) return;
+  card.querySelector('.idea-view-' + id).style.display = 'none';
+  card.querySelector('.idea-edit-'  + id).style.display = 'flex';
+  document.getElementById('idea-edit-title-' + id)?.focus();
+}
+
+function closeIdeaEdit(id) {
+  const card = document.getElementById('idea-card-' + id);
+  if (!card) return;
+  card.querySelector('.idea-view-' + id).style.display = 'flex';
+  card.querySelector('.idea-edit-'  + id).style.display = 'none';
+}
+
+function saveIdeaEdit(id) {
+  const idea = freeIdeas.find(x => x.id === id);
+  if (!idea) return;
+  const newTitle = document.getElementById('idea-edit-title-' + id)?.value.trim();
+  const newDesc  = document.getElementById('idea-edit-desc-'  + id)?.value.trim();
+  if (!newTitle) {
+    const el = document.getElementById('idea-edit-title-' + id);
+    el.style.borderColor = 'var(--q1-color)';
+    setTimeout(() => { el.style.borderColor = ''; }, 900);
+    return;
+  }
+  idea.title = cap(newTitle);
+  idea.desc  = newDesc || '';
+  idea.updatedAt = Date.now();
+  saveIdeas();
+  renderCommentIdeas();
+  toast('💡 Idée mise à jour !', 'success');
+}
+
 function deleteCommentIdea(id) {
-  const t = tasks.find(x => x.id === id);
-  if (t) { t.status = 'deleted'; t.deletedAt = Date.now(); }
-  save(); renderAll();
+  freeIdeas = freeIdeas.filter(x => x.id !== id);
+  saveIdeas();
   renderCommentIdeas();
 }
+
+// ── FAB draggable ────────────────────────────────────────────────────────────
+(function() {
+  const fab      = document.getElementById('comment-fab');
+  const STORE    = 'taskflow_fab_pos';
+  let dragging   = false, moved = false;
+  let startX, startY, startRight, startBottom;
+
+  // Restaurer position sauvegardée
+  const saved = JSON.parse(localStorage.getItem(STORE) || 'null');
+  if (saved) {
+    fab.style.right  = Math.max(8, saved.right)  + 'px';
+    fab.style.bottom = Math.max(8, saved.bottom) + 'px';
+    fab.style.left   = '';
+    fab.style.top    = '';
+  }
+
+  function getRight()  { return window.innerWidth  - fab.getBoundingClientRect().right; }
+  function getBottom() { return window.innerHeight - fab.getBoundingClientRect().bottom; }
+
+  function onStart(e) {
+    dragging = true; moved = false;
+    const pt = e.touches ? e.touches[0] : e;
+    startX = pt.clientX; startY = pt.clientY;
+    startRight  = getRight();
+    startBottom = getBottom();
+    fab.style.cursor     = 'grabbing';
+    fab.style.transition = 'box-shadow .2s';
+    fab.style.boxShadow  = '0 6px 22px rgba(14,165,233,.7)';
+    e.preventDefault();
+  }
+
+  function onMove(e) {
+    if (!dragging) return;
+    const pt = e.touches ? e.touches[0] : e;
+    const dx = pt.clientX - startX;
+    const dy = pt.clientY - startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
+    if (!moved) return;
+    const newRight  = Math.max(8, Math.min(window.innerWidth  - 54, startRight  - dx));
+    const newBottom = Math.max(8, Math.min(window.innerHeight - 54, startBottom + dy));
+    fab.style.right  = newRight  + 'px';
+    fab.style.bottom = newBottom + 'px';
+    fab.style.left   = '';
+    fab.style.top    = '';
+    // Déplacer aussi le panel si ouvert
+    const panel = document.getElementById('comment-panel');
+    if (panel && panel.style.display === 'flex') _positionCommentPanel();
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function onEnd() {
+    if (!dragging) return;
+    dragging = false;
+    fab.style.cursor    = 'grab';
+    fab.style.boxShadow = '0 4px 14px rgba(14,165,233,.45)';
+    if (!moved) {
+      toggleCommentPanel();
+    } else {
+      localStorage.setItem(STORE, JSON.stringify({ right: getRight(), bottom: getBottom() }));
+    }
+  }
+
+  fab.addEventListener('mousedown',  onStart, { passive: false });
+  fab.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('mousemove',  onMove, { passive: false });
+  document.addEventListener('touchmove',  onMove, { passive: false });
+  document.addEventListener('mouseup',    onEnd);
+  document.addEventListener('touchend',   onEnd);
+})();
 </script>
+<!-- ═══════════ MODAL DOUBLONS ═══════════ -->
+<div id="duplicates-modal" class="modal-overlay" style="display:none;z-index:500;">
+  <div class="modal-box" style="max-width:640px;width:96vw;max-height:82vh;display:flex;flex-direction:column;padding:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg3);">
+      <span style="font-weight:700;font-size:.95rem;color:var(--text);">🔀 Doublons détectés</span>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="dup-count-badge" style="font-size:.75rem;color:var(--text3);"></span>
+        <button onclick="closeDuplicatesModal()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:4px;">✕</button>
+      </div>
+    </div>
+    <div id="duplicates-content" style="overflow-y:auto;flex:1;padding:14px 16px;display:flex;flex-direction:column;gap:12px;"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg3);">
+      <span style="font-size:.75rem;color:var(--text3);">La tâche gardée reçoit les notes des doublons.</span>
+      <div style="display:flex;gap:8px;">
+        <button id="dup-merge-all-btn" class="sync-btn primary" onclick="mergeAllDuplicates()" style="font-size:.82rem;padding:6px 14px;">✅ Fusionner tout</button>
+        <button class="sync-btn" onclick="closeDuplicatesModal()" style="font-size:.82rem;padding:6px 14px;">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ FIREBASE SDK ═══════════ -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -6161,7 +7929,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
 const fbDb   = firebase.firestore();
-let   fbAutoSync = localStorage.getItem('taskflow_fb_autosync') === '1';
+let fbAutoSync = true; // toujours actif quand connecté
+let _fbSnapshotUnsub = null; // listener temps réel
+let _fbPushTimeout   = null; // debounce push
+let _fbApplyingRemote = false; // évite les boucles
 
 // Écouter le changement d'état de connexion
 fbAuth.onAuthStateChanged(user => {
@@ -6169,14 +7940,53 @@ fbAuth.onAuthStateChanged(user => {
     document.getElementById('fb-login-form').style.display      = 'none';
     document.getElementById('fb-connected-panel').style.display = 'flex';
     document.getElementById('fb-user-email').textContent        = user.email;
-    document.getElementById('fb-autosync').checked              = fbAutoSync;
+    document.getElementById('fb-autosync').checked              = true;
     updateFbLastSync();
+    _startFirebaseListener(user);   // écoute temps réel
+    firebasePull();                 // pull immédiat au login
   } else {
     document.getElementById('fb-login-form').style.display      = 'block';
     document.getElementById('fb-connected-panel').style.display = 'none';
+    if (_fbSnapshotUnsub) { _fbSnapshotUnsub(); _fbSnapshotUnsub = null; }
   }
   updateFbHeaderBtn();
 });
+
+// Listener temps réel : reçoit les changements depuis les autres appareils
+function _startFirebaseListener(user) {
+  if (_fbSnapshotUnsub) _fbSnapshotUnsub();
+  _fbSnapshotUnsub = fbDb.collection('users').doc(user.uid)
+    .onSnapshot(doc => {
+      if (!doc.exists || _fbApplyingRemote) return;
+      const data = doc.data();
+      const remoteAt = data.updatedAt || '';
+      const localAt  = localStorage.getItem('taskflow_fb_lastsync_at') || '';
+      if (remoteAt <= localAt) return; // déjà à jour
+      _applyRemoteData(data, remoteAt);
+    }, err => console.warn('[Firebase] listener error:', err));
+}
+
+function _applyRemoteData(data, updatedAt, msg = '🔄 Sync Firebase reçue') {
+  _fbApplyingRemote = true;
+  if (Array.isArray(data.tasks))      { tasks      = data.tasks;      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+  if (Array.isArray(data.todayTasks)) { todayTasks = data.todayTasks; saveToday(); }
+  if (Array.isArray(data.freeNotes))  { freeNotes  = data.freeNotes;  saveFreeNotes(); }
+  const now = new Date().toLocaleString('fr-FR');
+  localStorage.setItem('taskflow_fb_lastsync', now);
+  if (updatedAt) localStorage.setItem('taskflow_fb_lastsync_at', updatedAt);
+  updateFbLastSync();
+  renderAll();
+  if (currentView === 'notes') renderFreeNotes();
+  toast(msg, 'success');
+  setTimeout(() => { _fbApplyingRemote = false; }, 1000);
+}
+
+// Appelée dans save() — debounce 2s pour éviter les push en rafale
+function fbSyncOnSave() {
+  if (!fbAutoSync || !fbAuth.currentUser || _fbApplyingRemote) return;
+  clearTimeout(_fbPushTimeout);
+  _fbPushTimeout = setTimeout(() => firebasePush(true), 2000);
+}
 
 // ── Modal ──────────────────────────────────────
 function openFirebaseModal()  {
@@ -6202,24 +8012,26 @@ function firebaseLogout() {
 }
 
 // ── Push (envoyer vers Firebase) ───────────────
-async function firebasePush() {
+async function firebasePush(silent = false) {
   const user = fbAuth.currentUser;
-  if (!user) { toast('❌ Connectez-vous d\'abord', 'error'); return; }
+  if (!user) { if (!silent) toast('❌ Connectez-vous d\'abord', 'error'); return; }
   try {
-    toast('⬆ Envoi en cours…', 'info');
+    if (!silent) toast('⬆ Envoi en cours…', 'info');
+    const updatedAt = new Date().toISOString();
     await fbDb.collection('users').doc(user.uid).set({
       tasks,
       todayTasks,
       freeNotes,
       layout: { quadOrder, quadSizes, quadCollapsed, snoozeSpanState },
-      updatedAt: new Date().toISOString()
+      updatedAt
     });
     const now = new Date().toLocaleString('fr-FR');
     localStorage.setItem('taskflow_fb_lastsync', now);
+    localStorage.setItem('taskflow_fb_lastsync_at', updatedAt);
     updateFbLastSync();
-    toast('✅ Données envoyées sur Firebase !', 'success');
+    if (!silent) toast('✅ Données envoyées sur Firebase !', 'success');
   } catch(e) {
-    toast('❌ Erreur Firebase : ' + e.message, 'error');
+    if (!silent) toast('❌ Erreur Firebase : ' + e.message, 'error');
     console.error(e);
   }
 }
@@ -6233,31 +8045,17 @@ async function firebasePull() {
     const doc = await fbDb.collection('users').doc(user.uid).get();
     if (!doc.exists) { toast('ℹ️ Aucune donnée dans Firebase', 'info'); return; }
     const data = doc.data();
-    if (Array.isArray(data.tasks))      { tasks      = data.tasks;      save(); }
-    if (Array.isArray(data.todayTasks)) { todayTasks = data.todayTasks; saveToday(); }
-    if (Array.isArray(data.freeNotes))  { freeNotes  = data.freeNotes;  saveFreeNotes(); }
-    const now = new Date().toLocaleString('fr-FR');
-    localStorage.setItem('taskflow_fb_lastsync', now);
-    updateFbLastSync();
-    renderAll();
-    if (currentView === 'notes') renderFreeNotes();
-    toast('✅ Données reçues depuis Firebase !', 'success');
+    _applyRemoteData(data, data.updatedAt || '', '✅ Données reçues depuis Firebase !');
   } catch(e) {
     toast('❌ Erreur Firebase : ' + e.message, 'error');
     console.error(e);
   }
 }
 
-// ── Auto-sync ──────────────────────────────────
+// ── Auto-sync (toujours actif quand connecté) ──
 function toggleFirebaseAutoSync(on) {
-  fbAutoSync = on;
-  localStorage.setItem('taskflow_fb_autosync', on ? '1' : '0');
-  toast(on ? '🔄 Auto-sync Firebase activé' : 'Auto-sync désactivé', 'info');
+  toast('🔄 Auto-sync toujours actif quand connecté', 'info');
 }
-
-// Appeler cette fonction dans save() pour auto-sync
-const _origSave = window.save || function(){};
-const _fbSaveHook = () => { if (fbAutoSync && fbAuth.currentUser) firebasePush(); };
 
 // ── Helpers ────────────────────────────────────
 function updateFbLastSync() {
@@ -6280,6 +8078,15 @@ function updateFbHeaderBtn() {
 document.getElementById('firebase-modal').addEventListener('click', e => {
   if (e.target === document.getElementById('firebase-modal')) closeFirebaseModal();
 });
+
+// ── Service Worker (PWA) ────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/taskflow/sw.js')
+      .then(reg => console.log('[PWA] SW enregistré :', reg.scope))
+      .catch(err => console.warn('[PWA] SW échoué :', err));
+  });
+}
 </script>
 </body>
 </html>

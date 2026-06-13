@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Post-it Focus</title>
+<hta:application
+  id="oApp"
+  applicationname="TaskFlowPostit"
+  singleinstance="yes"
+  border="thin"
+  caption="yes"
+  sysmenu="yes"
+  maximizebutton="no"
+  minimizebutton="yes"
+  showintaskbar="yes"
+  scroll="no"
+  contextmenu="no"
+  selection="no" />
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0; padding: 0;
+    background: #fdf0a0;
+    color: #4a3c0a;
+    font-family: "Segoe Print", "Comic Sans MS", "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  #hdr {
+    padding: 9px 14px;
+    border-bottom: 2px dashed rgba(74,60,10,.35);
+    font-weight: bold; font-size: 15px;
+  }
+  #cnt { float: right; font-size: 11px; opacity: .7; font-weight: normal; margin-top: 3px; }
+  #list { padding: 6px 14px 14px; overflow-y: auto; height: 82%; }
+  .item {
+    padding: 8px 2px;
+    border-bottom: 1px dotted rgba(74,60,10,.3);
+    cursor: pointer; font-size: 13px; line-height: 1.4;
+  }
+  .item:hover { background: rgba(74,60,10,.06); }
+  .box {
+    display: inline-block; width: 13px; height: 13px;
+    border: 2px solid #4a3c0a; border-radius: 3px;
+    margin-right: 8px; vertical-align: -2px;
+    text-align: center; font-size: 10px; line-height: 12px;
+  }
+  .done { opacity: .45; text-decoration: line-through; }
+  .done .box { background: #4a3c0a; color: #fdf0a0; }
+  #err { padding: 4px 14px; font-size: 10px; color: #8a5a00; }
+  .empty { opacity: .6; text-align: center; padding: 26px 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="hdr">Post-it Focus <span id="cnt"></span></div>
+<div id="list"><div class="empty">Chargement…</div></div>
+<div id="err"></div>
+
+<script>
+/* Adapter le port si besoin : le post-it teste ces adresses dans l'ordre */
+var URLS = [
+  'http://localhost:8080/taskflow/api/sync.php',
+  'http://localhost:8888/taskflow/api/sync.php',
+  'http://localhost/taskflow/api/sync.php',
+  'http://127.0.0.1:8080/taskflow/api/sync.php'
+];
+var syncUrl = null;
+var focusList = [];
+
+try {
+  window.resizeTo(320, 440);
+  window.moveTo((screen.availWidth || 1280) - 330, 80);
+} catch(e) {}
+
+function xhr(method, url, body, cb) {
+  var x = new XMLHttpRequest();
+  try {
+    x.open(method, url, true);
+    if (body) x.setRequestHeader('Content-Type', 'application/json');
+    x.onreadystatechange = function() {
+      if (x.readyState === 4) cb(x.status === 200 ? x.responseText : null);
+    };
+    x.send(body || null);
+  } catch(e) { cb(null); }
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setErr(msg) { document.getElementById('err').innerHTML = msg || ''; }
+
+function findUrl(i) {
+  i = i || 0;
+  if (i >= URLS.length) {
+    setErr('Serveur TaskFlow introuvable — vérifier que MAMP est démarré. Nouvel essai dans 15s…');
+    setTimeout(function(){ findUrl(0); }, 15000);
+    return;
+  }
+  xhr('GET', URLS[i] + '?t=' + new Date().getTime(), null, function(res) {
+    if (res) { syncUrl = URLS[i]; setErr(''); tick(); }
+    else { findUrl(i + 1); }
+  });
+}
+
+function tick() {
+  xhr('GET', syncUrl + '?t=' + new Date().getTime(), null, function(res) {
+    if (res) {
+      try {
+        var j = JSON.parse(res);
+        focusList = (j && j.data && j.data.focusTasks) ? j.data.focusTasks : [];
+        render();
+        setErr('');
+      } catch(e) {}
+    } else {
+      setErr('Connexion perdue — nouvel essai…');
+    }
+    setTimeout(tick, 5000);
+  });
+}
+
+function render() {
+  var list = document.getElementById('list');
+  var pending = [], done = [], i;
+  for (i = 0; i < focusList.length; i++) {
+    (focusList[i].done ? done : pending).push(focusList[i]);
+  }
+  document.getElementById('cnt').innerHTML = pending.length + ' en cours';
+  if (!focusList.length) {
+    list.innerHTML = '<div class="empty">Aucune tâche en focus</div>';
+    return;
+  }
+  var html = '', t;
+  for (i = 0; i < pending.length; i++) {
+    t = pending[i];
+    html += '<div class="item" onclick="toggleTask(\'' + t.id + '\')" title="Cliquer pour marquer terminée">'
+          + '<span class="box"></span>' + esc(t.title) + '</div>';
+  }
+  for (i = 0; i < done.length; i++) {
+    t = done[i];
+    html += '<div class="item done" onclick="toggleTask(\'' + t.id + '\')" title="Cliquer pour remettre en cours">'
+          + '<span class="box">&#10003;</span>' + esc(t.title) + '</div>';
+  }
+  list.innerHTML = html;
+}
+
+function toggleTask(id) {
+  if (!syncUrl) return;
+  /* Relire les données fraîches, modifier, renvoyer */
+  xhr('GET', syncUrl + '?t=' + new Date().getTime(), null, function(res) {
+    if (!res) return;
+    try {
+      var j = JSON.parse(res);
+      if (!j || !j.data || !j.data.focusTasks) return;
+      var d = j.data, i;
+      for (i = 0; i < d.focusTasks.length; i++) {
+        if (d.focusTasks[i].id === id) {
+          d.focusTasks[i].done = !d.focusTasks[i].done;
+          if (d.focusTasks[i].done) d.focusTasks[i].doneAt = new Date().getTime();
+        }
+      }
+      d.savedAt = new Date().toISOString();
+      xhr('POST', syncUrl, JSON.stringify({ device: 'postit-windows', data: d }), function() {
+        focusList = d.focusTasks;
+        render();
+      });
+    } catch(e) {}
+  });
+}
+
+findUrl();
+</script>
+</body>
+</html>
