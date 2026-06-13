@@ -748,6 +748,15 @@
   .q-ctrl-btn:hover { border-color:var(--border); color:var(--text); background:var(--bg4); }
   .q-ctrl-btn.q-collapse-btn { font-size:.8rem; }
   .q-ctrl-separator { width:1px; height:14px; background:var(--border); margin:0 2px; }
+  /* Sur mobile : cacher les boutons de déplacement/resize, garder add + collapse + maximize */
+  @media (max-width:900px) {
+    .q-ctrl-btn:not(.q-collapse-btn):not(.q-add-btn):not(.q-maximize-btn) { display:none; }
+    .q-ctrl-separator { display:none; }
+    .q-ctrl-btn.q-collapse-btn { font-size:1rem; padding:4px 8px; }
+    .q-ctrl-btn.q-add-btn      { font-size:1rem; padding:4px 8px; }
+    .q-ctrl-btn.q-maximize-btn { font-size:1rem; padding:4px 8px; }
+    .quadrant-header { height:42px; min-height:42px; padding:0 10px; gap:6px; }
+  }
 
   /* Inline comment input */
   .ti-comment-form { display:none; margin:6px 0 4px 27px; }
