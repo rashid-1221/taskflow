@@ -7731,6 +7731,8 @@ function getQuadInfo(quadId) {
 function deployToGitHub() {
   const btn = document.getElementById('btn-deploy');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Déploiement…'; }
+  // Sync Firebase en même temps
+  firebasePush(true);
 
   const apiUrl = location.protocol === 'file:'
     ? 'http://localhost:8080/taskflow/api/deploy-github.php'
@@ -8275,7 +8277,7 @@ function _applyRemoteData(data, updatedAt, msg = '🔄 Sync Firebase reçue') {
   updateFbLastSync();
   renderAll();
   if (currentView === 'notes') renderFreeNotes();
-  toast(msg, 'success');
+  if (msg) toast(msg, 'success');
   setTimeout(() => { _fbApplyingRemote = false; }, 1000);
 }
 
@@ -8292,7 +8294,7 @@ async function _firebasePullIfNewer() {
     const localHasData = tasks && tasks.length > 0;
     // Ne pull que si Firebase est strictement plus récent ET qu'on n'a pas de données locales plus fraîches
     if (remoteAt > localAt || !localHasData) {
-      _applyRemoteData(data, remoteAt, localHasData ? '🔄 Sync Firebase reçue' : '✅ Données restaurées depuis Firebase');
+      _applyRemoteData(data, remoteAt, null);
     }
   } catch(e) {
     console.warn('[Firebase] pull-if-newer error:', e);
