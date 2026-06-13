@@ -8239,7 +8239,7 @@ fbAuth.onAuthStateChanged(user => {
     document.getElementById('fb-autosync').checked              = true;
     updateFbLastSync();
     _startFirebaseListener(user);   // écoute temps réel
-    firebasePull();                 // pull immédiat au login
+    _firebasePullIfNewer();         // pull uniquement si Firebase est plus récent
   } else {
     document.getElementById('fb-login-form').style.display      = 'block';
     document.getElementById('fb-connected-panel').style.display = 'none';
@@ -8275,6 +8275,26 @@ function _applyRemoteData(data, updatedAt, msg = '🔄 Sync Firebase reçue') {
   if (currentView === 'notes') renderFreeNotes();
   toast(msg, 'success');
   setTimeout(() => { _fbApplyingRemote = false; }, 1000);
+}
+
+// Pull uniquement si Firebase est plus récent que le dernier sync local
+async function _firebasePullIfNewer() {
+  const user = fbAuth.currentUser;
+  if (!user) return;
+  try {
+    const doc = await fbDb.collection('users').doc(user.uid).get();
+    if (!doc.exists) return;
+    const data      = doc.data();
+    const remoteAt  = data.updatedAt || '';
+    const localAt   = localStorage.getItem('taskflow_fb_lastsync_at') || '';
+    const localHasData = tasks && tasks.length > 0;
+    // Ne pull que si Firebase est strictement plus récent ET qu'on n'a pas de données locales plus fraîches
+    if (remoteAt > localAt || !localHasData) {
+      _applyRemoteData(data, remoteAt, localHasData ? '🔄 Sync Firebase reçue' : '✅ Données restaurées depuis Firebase');
+    }
+  } catch(e) {
+    console.warn('[Firebase] pull-if-newer error:', e);
+  }
 }
 
 // Appelée dans save() — debounce 2s pour éviter les push en rafale
