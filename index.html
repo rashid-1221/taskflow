@@ -1214,10 +1214,41 @@
      RESPONSIVE — MOBILE / TABLETTE
   ════════════════════════════════════════ */
 
+  /* ── Barre de navigation mobile (bas d'écran) ── */
+  #mobile-nav {
+    display:none;
+    position:fixed; bottom:0; left:0; right:0; z-index:200;
+    background:var(--bg2); border-top:1px solid var(--border);
+    padding:6px 0 calc(6px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 20px rgba(0,0,0,.35);
+  }
+  #mobile-nav-inner {
+    display:flex; justify-content:space-around;
+  }
+  .mob-nav-btn {
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:3px; padding:6px 4px;
+    background:none; border:none; cursor:pointer;
+    color:var(--text3); font-size:.58rem; font-weight:700;
+    text-transform:uppercase; letter-spacing:.03em;
+    position:relative; border-radius:10px;
+  }
+  .mob-nav-btn .mn-icon { font-size:1.35rem; line-height:1; }
+  .mob-nav-btn.active   { color:var(--accent); }
+  .mob-nav-btn.active-today { color:var(--gold); }
+  .mob-nav-badge {
+    position:absolute; top:2px; right:calc(50% - 18px);
+    background:var(--q1-color); color:#fff;
+    border-radius:10px; font-size:.55rem; font-weight:800;
+    padding:1px 5px; min-width:16px; text-align:center; display:none;
+  }
+  .mob-nav-badge.visible { display:block; }
+
   /* Desktop : éléments mobiles cachés */
   @media (min-width:769px) {
     #btn-more-toggle { display:none !important; }
     #mobile-drawer   { display:none !important; }
+    #mobile-nav      { display:none !important; }
   }
 
   /* ── Tablette (≤1024px) ── */
@@ -1239,22 +1270,27 @@
   ══════════════════════════════════════ */
   @media (max-width:768px) {
 
-    /* ── Header ── */
-    header { padding:0 10px; height:48px; gap:6px; }
-    .logo  { font-size:.9rem; gap:5px; }
-    .logo span { display:none; }
+    /* ── Navigation déplacée en bas ── */
+    #mobile-nav  { display:block; }
+    .nav-tabs    { display:none !important; }
 
-    /* ── Navigation ── */
-    .nav-tabs { gap:0; flex:1; }
-    .nav-tab  { padding:0 8px; font-size:.72rem; gap:3px; flex:1; justify-content:center; }
-    .nav-tab-badge { display:none; }
+    /* Espace sous le contenu pour la barre du bas */
+    body { padding-bottom:70px; }
+
+    /* ── Header : logo + Firebase + ⋯ seulement ── */
+    header {
+      padding:0 12px;
+      height:48px;
+      justify-content:space-between;
+    }
+    .logo { font-size:.95rem; gap:6px; }
 
     /* ── Boutons header ── */
-    .header-actions              { gap:5px; flex-shrink:0; }
+    .header-actions              { gap:6px; flex-shrink:0; }
     .header-actions .mobile-hide { display:none !important; }
-    #btn-firebase                { padding:7px 10px; font-size:1.05rem; gap:0; }
+    #btn-firebase                { padding:8px 12px; font-size:1rem; gap:0; }
     #btn-firebase .btn-label     { display:none; }
-    #btn-more-toggle             { padding:7px 13px; font-size:1.1rem; font-weight:900; letter-spacing:.05em; }
+    #btn-more-toggle             { padding:8px 13px; font-size:1.1rem; font-weight:900; }
 
     /* ── Barre d'ajout rapide ── */
     .quick-add-bar {
@@ -1800,6 +1836,32 @@
     <button class="btn-icon" id="btn-more-toggle" onclick="openMobileDrawer()" title="Plus d'options">⋯</button>
   </div>
 </header>
+
+<!-- ═══ MOBILE NAV (barre bas) ═══ -->
+<div id="mobile-nav">
+  <div id="mobile-nav-inner">
+    <button class="mob-nav-btn active" id="mob-tab-matrice" onclick="switchView('matrice')">
+      <span class="mn-icon">🗂</span>
+      <span class="mob-nav-badge" id="mob-badge-matrice"></span>
+      Matrice
+    </button>
+    <button class="mob-nav-btn" id="mob-tab-today" onclick="switchView('today')">
+      <span class="mn-icon">☀️</span>
+      <span class="mob-nav-badge" id="mob-badge-today"></span>
+      Auj.
+    </button>
+    <button class="mob-nav-btn" id="mob-tab-focus" onclick="switchView('focus')">
+      <span class="mn-icon">🎯</span>
+      <span class="mob-nav-badge" id="mob-badge-focus"></span>
+      Focus
+    </button>
+    <button class="mob-nav-btn" id="mob-tab-notes" onclick="switchView('notes')">
+      <span class="mn-icon">📓</span>
+      <span class="mob-nav-badge" id="mob-badge-notes"></span>
+      Notes
+    </button>
+  </div>
+</div>
 
 <!-- ═══ MOBILE DRAWER ═══ -->
 <div id="mobile-drawer" style="display:none;">
@@ -2848,6 +2910,10 @@ function switchView(v) {
   document.getElementById('view-' + v).classList.add('active');
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('tab-' + v).classList.add('active');
+  // Sync barre mobile
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active','active-today'));
+  const mobBtn = document.getElementById('mob-tab-' + v);
+  if (mobBtn) mobBtn.classList.add(v === 'today' ? 'active-today' : 'active');
   if (v === 'today') { checkMorningNotes(true); renderToday(); }
   if (v === 'notes') { renderFreeNotes(); }
   if (v === 'matrice') { renderCustomQuads(); }
@@ -3099,6 +3165,11 @@ function updateTabBadges() {
   const focBadge = (typeof focusTasks !== 'undefined') ? focusTasks.filter(t=>!t.done).length : 0;
   const focEl = document.getElementById('tab-badge-focus');
   if (focEl) focEl.textContent = focBadge;
+  // Badges barre mobile
+  const _mb = (id, n) => { const el = document.getElementById(id); if (!el) return; el.textContent = n; el.classList.toggle('visible', n > 0); };
+  _mb('mob-badge-matrice', matBadge);
+  _mb('mob-badge-today',   todBadge);
+  _mb('mob-badge-focus',   focBadge);
   // Show trash count on Archive button
   const arcBtn = document.querySelector('.btn-icon[onclick="openArchive()"]');
   if (arcBtn) arcBtn.textContent = trashCount > 0 ? `🗑 Archive (${trashCount})` : '📦 Archive';
