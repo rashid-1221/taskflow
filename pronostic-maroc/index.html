@@ -1030,29 +1030,12 @@ function exportPronostic() {
   // ── Sauvegarde dans l'historique local ──
   saveToHistorique(data);
 
-  const res = (a, b) => a > b ? '✅ Victoire' : a < b ? '❌ Défaite' : '🤝 Nul';
-
-  const body =
-`Bonjour,
-
-Voici mon pronostic pour la phase de groupes du Maroc à la Coupe du Monde 2026 :
-
-🇲🇦 Maroc vs Écosse 🏴󠁧󠁢󠁳󠁣󠁴󠁿   :  ${SCORES.m1a} – ${SCORES.m1b}  (${res(SCORES.m1a, SCORES.m1b)})
-🇲🇦 Maroc vs Haïti 🇭🇹           :  ${SCORES.m2a} – ${SCORES.m2b}  (${res(SCORES.m2a, SCORES.m2b)})
-⚽ Next Step                      :  🔒 À déterminer
-
-─── DONNÉES D'IMPORT (ne pas modifier) ───
-${lastJSON}
-
-Bonne chance au Maroc ! 🦁`;
-
-  const subject = `⚽ Pronostic Maroc 2026 – ${prenom} ${nom}`;
-  const mailto = `mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-  window.location.href = mailto;
-
-  document.getElementById('success-box').classList.add('show');
-  toast('📧 Client mail ouvert !');
+  toast('✅ Pronostic enregistré dans l\'historique !');
+  // Aller directement à l'historique
+  const navBtns = document.querySelectorAll('.nav button');
+  showPage('historique', navBtns[1]);
+  navBtns.forEach(b => b.classList.remove('active'));
+  navBtns[1].classList.add('active');
 }
 
 function copyJSON() {
