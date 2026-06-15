@@ -737,6 +737,58 @@
     font-size: 14px;
     cursor: pointer;
   }
+
+  /* ── Table Pronostics ── */
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .prono-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    animation: slideIn 0.3s ease;
+  }
+  .prono-table thead tr {
+    background: linear-gradient(135deg, rgba(193,39,45,0.25), rgba(0,98,51,0.25));
+    border-bottom: 2px solid rgba(255,184,0,0.3);
+  }
+  .prono-table th {
+    padding: 12px 10px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .prono-table th small { color: #ccc; font-size: 10px; font-weight: 400; }
+  .th-flag { width: 22px; height: auto; border-radius: 3px; vertical-align: middle; margin: 0 1px; }
+  .prono-table td {
+    padding: 11px 10px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    vertical-align: middle;
+  }
+  .prono-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+  .prono-table tbody tr.row-me { background: rgba(255,184,0,0.06); }
+  .prono-table tbody tr.row-me td:first-child { border-left: 3px solid var(--gold); }
+  .tbl-rank { color: var(--muted); font-weight: 700; width: 36px; }
+  .tbl-name { text-align: left !important; font-weight: 700; color: #fff; white-space: nowrap; }
+  .tbl-date { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .tbl-actions { white-space: nowrap; }
+  .tbl-pill {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 800;
+    padding: 4px 14px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.07);
+    min-width: 52px;
+    text-align: center;
+  }
+  .tbl-pill.win  { background: rgba(0,98,51,0.3);   color: #66bb6a; }
+  .tbl-pill.draw { background: rgba(255,184,0,0.2); color: var(--gold); }
+  .tbl-pill.loss { background: rgba(193,39,45,0.3); color: #ef5350; }
+  .tbl-pill.lock { background: rgba(255,255,255,0.05); color: var(--muted); font-size: 11px; }
   .btn-histo-del:hover { background: rgba(193,39,45,0.22); }
 
   .histo-empty {
@@ -1092,44 +1144,51 @@ function renderHistorique(silent) {
       return;
     }
 
-    countEl.innerHTML = `<span>${list.length}</span> participant${list.length > 1 ? 's' : ''} &nbsp;·&nbsp; <span style="font-size:11px;color:var(--muted)">🔄 mise à jour auto</span>`;
+    countEl.innerHTML = `<span>${list.length}</span> participant${list.length > 1 ? 's' : ''} &nbsp;·&nbsp; <span style="font-size:11px;color:var(--muted)">🔄 auto</span>`;
 
-    container.innerHTML = list.map(d => {
-      const date = d.date ? new Date(d.date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
-      const matchRows = (d.matches || []).map(m => {
-        if (m.locked) return `
-          <div class="histo-match">
-            <span class="histo-match-name">⚽ Next Step</span>
-            <span class="histo-score lock">🔒 À venir</span>
-          </div>`;
-        const cls = m.maroc > m.adversaire ? 'win' : m.maroc < m.adversaire ? 'loss' : 'draw';
-        const flag = m.match.includes('cosse') ? '🏴󠁧󠁢󠁳󠁣󠁴󠁿' : m.match.includes('aïti') ? '🇭🇹' : '⚽';
-        return `
-          <div class="histo-match">
-            <span class="histo-match-name">${flag} ${m.match}</span>
-            <span class="histo-score ${cls}">${m.maroc} – ${m.adversaire}</span>
-          </div>`;
-      }).join('');
+    const score = (m, i) => {
+      if (!m || m.locked) return `<td><span class="tbl-pill lock">🔒</span></td>`;
+      const cls = m.maroc > m.adversaire ? 'win' : m.maroc < m.adversaire ? 'loss' : 'draw';
+      return `<td><span class="tbl-pill ${cls}">${m.maroc} – ${m.adversaire}</span></td>`;
+    };
 
+    const rows = list.map((d, i) => {
       const isMe = d.nom === (localStorage.getItem(MY_NAME_KEY) || '');
-      const actions = `
-        <div class="histo-actions">
-          ${isMe ? `<button class="btn-histo-edit" onclick="editMyPronostic()" title="Modifier">✏️ Modifier</button>` : ''}
-          <button class="btn-histo-del" onclick="deleteMyPronostic('${esc(d.nom)}')" title="Supprimer">🗑 Supprimer</button>
-        </div>`;
-
+      const m = d.matches || [];
+      const date = d.date ? new Date(d.date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
       return `
-        <div class="histo-card${isMe ? ' my-card' : ''}">
-          <div class="histo-card-header">
-            <div>
-              <div class="histo-name">🇲🇦 ${esc(d.nom)}${isMe ? ' <span class="me-badge">Moi</span>' : ''}</div>
-              <div class="histo-date">${date}</div>
-            </div>
-            ${actions}
-          </div>
-          <div class="histo-matches">${matchRows}</div>
-        </div>`;
+        <tr class="${isMe ? 'row-me' : ''}">
+          <td class="tbl-rank">${i + 1}</td>
+          <td class="tbl-name">
+            🇲🇦 ${esc(d.nom)}
+            ${isMe ? '<span class="me-badge">Moi</span>' : ''}
+          </td>
+          ${score(m[0])} ${score(m[1])} ${score(m[2])}
+          <td class="tbl-date">${date}</td>
+          <td class="tbl-actions">
+            ${isMe ? `<button type="button" class="btn-histo-edit" onclick="editMyPronostic()">✏️</button>` : ''}
+            <button type="button" class="btn-histo-del" onclick="deleteMyPronostic('${esc(d.nom)}')">🗑</button>
+          </td>
+        </tr>`;
     }).join('');
+
+    container.innerHTML = `
+      <div class="tbl-wrap">
+        <table class="prono-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Participant</th>
+              <th><img src="https://flagcdn.com/w40/ma.png" class="th-flag"> <img src="https://flagcdn.com/w40/gb-sct.png" class="th-flag"><br><small>Écosse</small></th>
+              <th><img src="https://flagcdn.com/w40/ma.png" class="th-flag"> <img src="https://flagcdn.com/w40/ht.png" class="th-flag"><br><small>Haïti</small></th>
+              <th>⚽<br><small>Next Step</small></th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   }
 }
 
