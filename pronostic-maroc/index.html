@@ -1027,39 +1027,27 @@ function exportPronostic() {
 
   lastJSON = JSON.stringify(data);
 
-  // ── Sauvegarde serveur + local ──
+  // ── Sauvegarde locale immédiate (pas d'attente serveur) ──
+  saveToHistorique(data);
   const btnExport = document.querySelector('.btn-export');
-  btnExport.disabled = true;
-  btnExport.textContent = '⏳ Enregistrement...';
+  btnExport.textContent = '✅ Pronostic enregistré !';
+  setTimeout(() => btnExport.textContent = '📤 Exporter mon pronostic', 3000);
+  toast('✅ Pronostic enregistré !');
+  const navBtns = document.querySelectorAll('.nav button');
+  navBtns.forEach(b => b.classList.remove('active'));
+  navBtns[1].classList.add('active');
+  showPage('historique', navBtns[1]);
+  startHistoRefresh();
 
+  // ── Envoi serveur en arrière-plan (sans bloquer l'UI) ──
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), 5000);
   fetch(API_BASE + '/save.php', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: lastJSON
-  })
-  .then(r => r.json())
-  .then(() => {
-    saveToHistorique(data);
-    btnExport.disabled = false;
-    btnExport.textContent = '✅ Pronostic enregistré !';
-    setTimeout(() => btnExport.textContent = '📤 Exporter mon pronostic', 3000);
-    toast('✅ Pronostic enregistré !');
-    const navBtns = document.querySelectorAll('.nav button');
-    navBtns.forEach(b => b.classList.remove('active'));
-    navBtns[1].classList.add('active');
-    showPage('historique', navBtns[1]);
-  })
-  .catch(() => {
-    // Fallback local si serveur indisponible
-    saveToHistorique(data);
-    btnExport.disabled = false;
-    btnExport.textContent = '📤 Exporter mon pronostic';
-    toast('⚠️ Sauvegardé localement (serveur indisponible)');
-    const navBtns = document.querySelectorAll('.nav button');
-    navBtns.forEach(b => b.classList.remove('active'));
-    navBtns[1].classList.add('active');
-    showPage('historique', navBtns[1]);
-  });
+    body: lastJSON,
+    signal: ctrl.signal
+  }).catch(() => {}); // silencieux — déjà sauvegardé localement
 }
 
 function copyJSON() {
