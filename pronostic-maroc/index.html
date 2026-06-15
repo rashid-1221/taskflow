@@ -749,9 +749,9 @@
 
 <!-- ─── NAV ─── -->
 <nav class="nav">
-  <button class="active" onclick="showPage('pronostic', this)">🇲🇦 Mon Pronostic</button>
-  <button onclick="showPage('historique', this); renderHistorique();" id="nav-histo">🏆 Pronostics Équipe <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
-  <button onclick="showPage('admin', this)">📊 Consolidation</button>
+  <button class="active" onclick="showPage('pronostic', this); stopHistoRefresh();">🇲🇦 Mon Pronostic</button>
+  <button onclick="showPage('historique', this); renderHistorique(); startHistoRefresh();" id="nav-histo">🏆 Pronostics Équipe <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
+  <button onclick="showPage('admin', this); stopHistoRefresh();">📊 Consolidation</button>
   <button class="btn-deploy" id="btn-deploy" onclick="deployToGithub()" title="Publier sur GitHub Pages">🚀</button>
 </nav>
 
@@ -969,7 +969,7 @@
 const SCORES = { m1a:0, m1b:0, m2a:0, m2b:0, m3a:0, m3b:0 };
 const ADMIN_PWD = 'ocapital2026';
 const STORAGE_KEY = 'pronostic_maroc_2026';
-const API_BASE = 'http://localhost:8080/taskflow/pronostic-maroc/api';
+const API_BASE = 'http://192.168.10.101:8080/taskflow/pronostic-maroc/api';
 let lastJSON = '';
 
 // ─── NAVIGATION ───
@@ -1257,37 +1257,37 @@ function updateHistoBadge(count) {
   else badge.style.display = 'none';
 }
 
-function renderHistorique() {
+let _histoRefreshTimer = null;
+
+function renderHistorique(silent) {
   const container = document.getElementById('histo-list');
   const countEl   = document.getElementById('histo-count');
-  const clearBtn  = document.getElementById('btn-clear-histo');
 
-  container.innerHTML = `<div class="histo-empty"><div class="icon">⏳</div><p>Chargement...</p></div>`;
+  if (!silent) {
+    container.innerHTML = `<div class="histo-empty"><div class="icon">⏳</div><p>Chargement...</p></div>`;
+  }
 
-  fetch(API_BASE + '/list.php')
+  fetch(API_BASE + '/list.php?t=' + Date.now())
     .then(r => r.json())
     .then(list => renderList(list))
-    .catch(() => {
-      // Fallback localStorage si serveur indisponible
-      renderList(getHistorique());
-    });
+    .catch(() => renderList(getHistorique()));
 
   function renderList(list) {
     updateHistoBadge(list.length);
+
     if (list.length === 0) {
-      clearBtn.style.display = 'none';
       countEl.innerHTML = '';
       container.innerHTML = `
         <div class="histo-empty">
           <div class="icon">📭</div>
-          <p>Aucun pronostic enregistré.<br>Soyez le premier à soumettre votre pronostic !</p>
+          <p>Aucun pronostic pour l'instant.<br>Soyez le premier à soumettre le vôtre !</p>
         </div>`;
       return;
     }
-    clearBtn.style.display = 'none'; // masqué — effacement géré côté serveur
-    countEl.innerHTML = `<span>${list.length}</span> participant${list.length > 1 ? 's' : ''}`;
 
-    container.innerHTML = list.map((d, i) => {
+    countEl.innerHTML = `<span>${list.length}</span> participant${list.length > 1 ? 's' : ''} &nbsp;·&nbsp; <span style="font-size:11px;color:var(--muted)">🔄 mise à jour auto</span>`;
+
+    container.innerHTML = list.map(d => {
       const date = d.date ? new Date(d.date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
       const matchRows = (d.matches || []).map(m => {
         if (m.locked) return `
@@ -1316,6 +1316,14 @@ function renderHistorique() {
         </div>`;
     }).join('');
   }
+}
+
+function startHistoRefresh() {
+  clearInterval(_histoRefreshTimer);
+  _histoRefreshTimer = setInterval(() => renderHistorique(true), 10000);
+}
+function stopHistoRefresh() {
+  clearInterval(_histoRefreshTimer);
 }
 
 function deleteHisto(i) {
