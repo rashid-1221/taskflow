@@ -1332,7 +1332,7 @@ function deployToGithub() {
   btn.classList.add('deploying');
   btn.disabled = true;
 
-  fetch('../api/deploy-github.php')
+  fetch('http://localhost:8080/taskflow/api/deploy-github.php')
     .then(r => r.json())
     .then(data => {
       btn.classList.remove('deploying');
