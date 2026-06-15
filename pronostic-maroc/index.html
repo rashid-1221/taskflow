@@ -750,7 +750,7 @@
 <!-- ─── NAV ─── -->
 <nav class="nav">
   <button class="active" onclick="showPage('pronostic', this)">🇲🇦 Mon Pronostic</button>
-  <button onclick="showPage('historique', this)" id="nav-histo">📋 Historique <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
+  <button onclick="showPage('historique', this)" id="nav-histo">🏆 Pronostics Équipe <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
   <button onclick="showPage('admin', this)">📊 Consolidation</button>
   <button class="btn-deploy" id="btn-deploy" onclick="deployToGithub()" title="Publier sur GitHub Pages">🚀</button>
 </nav>
@@ -951,8 +951,8 @@
 <!-- ─── PAGE HISTORIQUE ─── -->
 <div id="page-historique" class="page">
   <div class="histo-header">
-    <h1>📋 Historique des pronostics</h1>
-    <p>Tous les pronostics soumis sur cet appareil</p>
+    <h1>🏆 Pronostics Équipe</h1>
+    <p>Les pronostics de tous les participants</p>
   </div>
   <div class="histo-container">
     <div class="histo-count" id="histo-count"></div>
@@ -968,8 +968,8 @@
 // ─── STATE ───
 const SCORES = { m1a:0, m1b:0, m2a:0, m2b:0, m3a:0, m3b:0 };
 const ADMIN_PWD = 'ocapital2026';
-const ADMIN_EMAIL = 'rkhouy@ocapitalgroup.ma';
 const STORAGE_KEY = 'pronostic_maroc_2026';
+const API_BASE = 'http://localhost:8080/taskflow/pronostic-maroc/api';
 let lastJSON = '';
 
 // ─── NAVIGATION ───
@@ -1027,15 +1027,39 @@ function exportPronostic() {
 
   lastJSON = JSON.stringify(data);
 
-  // ── Sauvegarde dans l'historique local ──
-  saveToHistorique(data);
+  // ── Sauvegarde serveur + local ──
+  const btnExport = document.querySelector('.btn-export');
+  btnExport.disabled = true;
+  btnExport.textContent = '⏳ Enregistrement...';
 
-  toast('✅ Pronostic enregistré dans l\'historique !');
-  // Aller directement à l'historique
-  const navBtns = document.querySelectorAll('.nav button');
-  showPage('historique', navBtns[1]);
-  navBtns.forEach(b => b.classList.remove('active'));
-  navBtns[1].classList.add('active');
+  fetch(API_BASE + '/save.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: lastJSON
+  })
+  .then(r => r.json())
+  .then(() => {
+    saveToHistorique(data);
+    btnExport.disabled = false;
+    btnExport.textContent = '✅ Pronostic enregistré !';
+    setTimeout(() => btnExport.textContent = '📤 Exporter mon pronostic', 3000);
+    toast('✅ Pronostic enregistré !');
+    const navBtns = document.querySelectorAll('.nav button');
+    navBtns.forEach(b => b.classList.remove('active'));
+    navBtns[1].classList.add('active');
+    showPage('historique', navBtns[1]);
+  })
+  .catch(() => {
+    // Fallback local si serveur indisponible
+    saveToHistorique(data);
+    btnExport.disabled = false;
+    btnExport.textContent = '📤 Exporter mon pronostic';
+    toast('⚠️ Sauvegardé localement (serveur indisponible)');
+    const navBtns = document.querySelectorAll('.nav button');
+    navBtns.forEach(b => b.classList.remove('active'));
+    navBtns[1].classList.add('active');
+    showPage('historique', navBtns[1]);
+  });
 }
 
 function copyJSON() {
@@ -1234,56 +1258,64 @@ function updateHistoBadge(count) {
 }
 
 function renderHistorique() {
-  const list = getHistorique();
   const container = document.getElementById('histo-list');
   const countEl   = document.getElementById('histo-count');
   const clearBtn  = document.getElementById('btn-clear-histo');
 
-  updateHistoBadge(list.length);
+  container.innerHTML = `<div class="histo-empty"><div class="icon">⏳</div><p>Chargement...</p></div>`;
 
-  if (list.length === 0) {
-    clearBtn.style.display = 'none';
-    countEl.innerHTML = '';
-    container.innerHTML = `
-      <div class="histo-empty">
-        <div class="icon">📭</div>
-        <p>Aucun pronostic enregistré.<br>Remplissez le formulaire et cliquez sur<br><strong>Exporter mon pronostic</strong>.</p>
-      </div>`;
-    return;
-  }
+  fetch(API_BASE + '/list.php')
+    .then(r => r.json())
+    .then(list => renderList(list))
+    .catch(() => {
+      // Fallback localStorage si serveur indisponible
+      renderList(getHistorique());
+    });
 
-  clearBtn.style.display = 'block';
-  countEl.innerHTML = `<span>${list.length}</span> pronostic${list.length > 1 ? 's' : ''} enregistré${list.length > 1 ? 's' : ''}`;
-
-  container.innerHTML = list.map((d, i) => {
-    const date = d.date ? new Date(d.date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
-    const matchRows = (d.matches || []).map(m => {
-      if (m.locked) return `
-        <div class="histo-match">
-          <span class="histo-match-name">⚽ Next Step</span>
-          <span class="histo-score lock">🔒 À venir</span>
+  function renderList(list) {
+    updateHistoBadge(list.length);
+    if (list.length === 0) {
+      clearBtn.style.display = 'none';
+      countEl.innerHTML = '';
+      container.innerHTML = `
+        <div class="histo-empty">
+          <div class="icon">📭</div>
+          <p>Aucun pronostic enregistré.<br>Soyez le premier à soumettre votre pronostic !</p>
         </div>`;
-      const cls = m.maroc > m.adversaire ? 'win' : m.maroc < m.adversaire ? 'loss' : 'draw';
-      const flag = m.match.includes('cosse') ? '🏴󠁧󠁢󠁳󠁣󠁴󠁿' : m.match.includes('aïti') ? '🇭🇹' : '⚽';
+      return;
+    }
+    clearBtn.style.display = 'none'; // masqué — effacement géré côté serveur
+    countEl.innerHTML = `<span>${list.length}</span> participant${list.length > 1 ? 's' : ''}`;
+
+    container.innerHTML = list.map((d, i) => {
+      const date = d.date ? new Date(d.date).toLocaleDateString('fr-FR', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+      const matchRows = (d.matches || []).map(m => {
+        if (m.locked) return `
+          <div class="histo-match">
+            <span class="histo-match-name">⚽ Next Step</span>
+            <span class="histo-score lock">🔒 À venir</span>
+          </div>`;
+        const cls = m.maroc > m.adversaire ? 'win' : m.maroc < m.adversaire ? 'loss' : 'draw';
+        const flag = m.match.includes('cosse') ? '🏴󠁧󠁢󠁳󠁣󠁴󠁿' : m.match.includes('aïti') ? '🇭🇹' : '⚽';
+        return `
+          <div class="histo-match">
+            <span class="histo-match-name">${flag} ${m.match}</span>
+            <span class="histo-score ${cls}">${m.maroc} – ${m.adversaire}</span>
+          </div>`;
+      }).join('');
+
       return `
-        <div class="histo-match">
-          <span class="histo-match-name">${flag} ${m.match}</span>
-          <span class="histo-score ${cls}">${m.maroc} – ${m.adversaire}</span>
+        <div class="histo-card">
+          <div class="histo-card-header">
+            <div>
+              <div class="histo-name">🇲🇦 ${esc(d.nom)}</div>
+              <div class="histo-date">${date}</div>
+            </div>
+          </div>
+          <div class="histo-matches">${matchRows}</div>
         </div>`;
     }).join('');
-
-    return `
-      <div class="histo-card">
-        <div class="histo-card-header">
-          <div>
-            <div class="histo-name">🇲🇦 ${esc(d.nom)}</div>
-            <div class="histo-date">${date}</div>
-          </div>
-          <button class="histo-delete" onclick="deleteHisto(${i})" title="Supprimer">✕</button>
-        </div>
-        <div class="histo-matches">${matchRows}</div>
-      </div>`;
-  }).join('');
+  }
 }
 
 function deleteHisto(i) {
