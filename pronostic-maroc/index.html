@@ -788,8 +788,6 @@
 <nav class="nav">
   <button class="active" onclick="showPage('pronostic', this); stopHistoRefresh();">🇲🇦 Mon Pronostic</button>
   <button onclick="showPage('historique', this); renderHistorique(); startHistoRefresh();" id="nav-histo">🏆 Pronostics Équipe <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
-  <button onclick="showPage('admin', this); stopHistoRefresh();">📊 Consolidation</button>
-  <button class="btn-deploy" id="btn-deploy" onclick="deployToGithub()" title="Publier sur GitHub Pages">🚀</button>
 </nav>
 
 <!-- ─── PAGE PRONOSTIC ─── -->
@@ -921,70 +919,6 @@
   </div>
 </div>
 
-<!-- ─── PAGE ADMIN ─── -->
-<div id="page-admin" class="page">
-  <!-- Auth -->
-  <div id="auth-wall">
-    <div class="auth-overlay">
-      <div style="font-size:40px;margin-bottom:12px">🔒</div>
-      <h2>Accès Admin</h2>
-      <p>Entrez le mot de passe pour accéder à la consolidation</p>
-      <input type="password" id="pwd-input" placeholder="••••••" onkeydown="if(event.key==='Enter')checkPwd()">
-      <button class="btn-auth" onclick="checkPwd()">Accéder</button>
-      <div class="auth-error" id="auth-error"></div>
-    </div>
-  </div>
-
-  <!-- Admin content -->
-  <div id="admin-content" style="display:none">
-    <div class="admin-header">
-      <h1>📊 Consolidation des pronostics</h1>
-      <p>Importez les pronostics reçus par email pour les consolider</p>
-    </div>
-
-    <div class="admin-container">
-
-      <div class="stats-row" id="stats-row">
-        <div class="stat-card"><div class="stat-val" id="stat-total">0</div><div class="stat-label">Participants</div></div>
-        <div class="stat-card"><div class="stat-val" id="stat-wins">—</div><div class="stat-label">Victoires Maroc (moy.)</div></div>
-        <div class="stat-card"><div class="stat-val" id="stat-goals">—</div><div class="stat-label">Buts Maroc (moy.)</div></div>
-      </div>
-
-      <div class="import-section">
-        <h3>📥 Importer un pronostic</h3>
-        <textarea id="json-import" placeholder='Collez ici le JSON reçu par email (ex: {"nom":"…","matches":[…]})&#10;Vous pouvez aussi coller plusieurs JSON séparés par des sauts de ligne.'></textarea>
-        <div class="import-row">
-          <button class="btn-import" onclick="importPronostic()">⬆ Importer</button>
-          <button class="btn-clear" onclick="clearAll()">🗑 Tout effacer</button>
-          <button class="btn-csv" onclick="exportCSV()">⬇ Exporter CSV</button>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Participant</th>
-              <th>🇲🇦 vs 🏴󠁧󠁢󠁳󠁣󠁴󠁿 Écosse</th>
-              <th>🇲🇦 vs 🇭🇹 Haïti</th>
-              <th>🇲🇦 vs 🌍 Pt Intégration</th>
-              <th>Date</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-        <div id="empty-state" class="empty-state">
-          <div class="icon">📭</div>
-          <div>Aucun pronostic importé pour l'instant</div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
 <!-- ─── PAGE HISTORIQUE ─── -->
 <div id="page-historique" class="page">
   <div class="histo-header">
@@ -1098,147 +1032,8 @@ function copyJSON() {
   });
 }
 
-// ─── ADMIN AUTH ───
-function checkPwd() {
-  const v = document.getElementById('pwd-input').value;
-  if (v === ADMIN_PWD) {
-    document.getElementById('auth-wall').style.display = 'none';
-    document.getElementById('admin-content').style.display = 'block';
-    loadData();
-  } else {
-    document.getElementById('auth-error').textContent = 'Mot de passe incorrect.';
-    document.getElementById('pwd-input').value = '';
-  }
-}
-
-// ─── IMPORT ───
-function importPronostic() {
-  const raw = document.getElementById('json-import').value.trim();
-  if (!raw) { toast('⚠️ Collez un JSON à importer'); return; }
-
-  // Support multiple JSONs (one per line or delimited)
-  const lines = raw.split(/\n(?=\{)/);
-  let imported = 0, errors = 0;
-  const existing = getStored();
-
-  lines.forEach(line => {
-    try {
-      const obj = JSON.parse(line.trim());
-      if (!obj.nom || !obj.matches) throw new Error('Format invalide');
-      // Deduplicate by nom + date
-      const key = obj.nom + '|' + (obj.date || '');
-      if (!existing.find(e => e.nom === obj.nom && e.date === obj.date)) {
-        existing.push(obj);
-        imported++;
-      } else {
-        toast(`ℹ️ ${obj.nom} déjà importé`);
-      }
-    } catch (e) {
-      errors++;
-    }
-  });
-
-  if (errors > 0 && imported === 0) {
-    toast('❌ JSON invalide — vérifiez le format');
-    return;
-  }
-
-  saveStored(existing);
-  renderTable(existing);
-  document.getElementById('json-import').value = '';
-  toast(`✅ ${imported} pronostic(s) importé(s)`);
-}
-
-function clearAll() {
-  if (!confirm('Effacer tous les pronostics importés ?')) return;
-  saveStored([]);
-  renderTable([]);
-  toast('🗑 Données effacées');
-}
-
-// ─── STORAGE ───
-function getStored() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
-}
-function saveStored(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
-
-// ─── RENDER TABLE ───
-function renderTable(data) {
-  const tbody = document.getElementById('tbody');
-  const empty = document.getElementById('empty-state');
-
-  document.getElementById('stat-total').textContent = data.length;
-
-  if (data.length === 0) {
-    tbody.innerHTML = '';
-    empty.style.display = 'block';
-    document.getElementById('stat-wins').textContent = '—';
-    document.getElementById('stat-goals').textContent = '—';
-    return;
-  }
-  empty.style.display = 'none';
-
-  // Stats
-  let totalWins = 0, totalGoals = 0;
-  data.forEach(d => {
-    d.matches.forEach(m => {
-      if (m.maroc > m.adversaire) totalWins++;
-      totalGoals += m.maroc;
-    });
-  });
-  document.getElementById('stat-wins').textContent = (totalWins / data.length).toFixed(1);
-  document.getElementById('stat-goals').textContent = (totalGoals / (data.length * 3)).toFixed(1);
-
-  tbody.innerHTML = data.map((d, i) => {
-    const m = d.matches || [];
-    const date = d.date ? new Date(d.date).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
-    return `<tr>
-      <td style="color:var(--muted)">${i+1}</td>
-      <td class="col-name">${esc(d.nom)}</td>
-      ${m.map(match => {
-        if (match.locked) return `<td><span class="score-pill" style="color:var(--gold);opacity:0.6">🔒 À venir</span></td>`;
-        const cls = match.maroc > match.adversaire ? 'win' : match.maroc < match.adversaire ? 'loss' : 'draw';
-        return `<td><span class="score-pill ${cls}">${match.maroc} – ${match.adversaire}</span></td>`;
-      }).join('')}
-      ${m.length < 3 ? '<td colspan="' + (3 - m.length) + '"></td>' : ''}
-      <td class="col-date">${date}</td>
-      <td><button style="background:none;border:none;color:#ef5350;cursor:pointer;font-size:16px" title="Supprimer" onclick="deleteEntry(${i})">✕</button></td>
-    </tr>`;
-  }).join('');
-}
-
-function deleteEntry(i) {
-  const data = getStored();
-  data.splice(i, 1);
-  saveStored(data);
-  renderTable(data);
-  toast('Entrée supprimée');
-}
 
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function loadData() { renderTable(getStored()); }
-
-// ─── EXPORT CSV ───
-function exportCSV() {
-  const data = getStored();
-  if (data.length === 0) { toast('Aucun pronostic à exporter'); return; }
-
-  const header = ['Participant','Maroc vs Écosse','Maroc vs Haïti','Maroc vs Point intégration','Résultat M1','Résultat M2','Résultat M3','Date'];
-  const rows = data.map(d => {
-    const m = d.matches || [];
-    const res = (a,b) => a > b ? 'Victoire' : a < b ? 'Défaite' : 'Nul';
-    return [
-      d.nom,
-      m[0] ? `${m[0].maroc}-${m[0].adversaire}` : '',
-      m[1] ? `${m[1].maroc}-${m[1].adversaire}` : '',
-      m[2] ? `${m[2].maroc}-${m[2].adversaire}` : '',
-      m[0] ? res(m[0].maroc, m[0].adversaire) : '',
-      m[1] ? res(m[1].maroc, m[1].adversaire) : '',
-      m[2] ? res(m[2].maroc, m[2].adversaire) : '',
-      d.date ? new Date(d.date).toLocaleString('fr-FR') : '',
-    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
-  });
 
   const csv = '﻿' + [header.join(','), ...rows].join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1422,35 +1217,6 @@ function clearHistorique() {
 }
 
 
-// ─── DEPLOY GITHUB ───
-function deployToGithub() {
-  const btn = document.getElementById('btn-deploy');
-  btn.textContent = '⏳';
-  btn.classList.add('deploying');
-  btn.disabled = true;
-
-  fetch('http://localhost:8080/taskflow/api/deploy-github.php')
-    .then(r => r.json())
-    .then(data => {
-      btn.classList.remove('deploying');
-      btn.disabled = false;
-      if (data.ok) {
-        btn.textContent = '✅';
-        toast('✅ Publié sur GitHub Pages !');
-      } else {
-        btn.textContent = '❌';
-        toast('❌ Erreur de déploiement');
-      }
-      setTimeout(() => btn.textContent = '🚀', 3000);
-    })
-    .catch(() => {
-      btn.classList.remove('deploying');
-      btn.disabled = false;
-      btn.textContent = '❌';
-      toast('❌ Impossible de contacter le serveur');
-      setTimeout(() => btn.textContent = '🚀', 3000);
-    });
-}
 
 // ─── INIT ───
 updateBadge('m1'); updateBadge('m2');
