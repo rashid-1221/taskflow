@@ -126,6 +126,17 @@
     color: #fff;
   }
   .nav button:hover:not(.active) { color: #fff; border-color: rgba(255,255,255,0.3); }
+  .btn-deploy {
+    margin-left: auto;
+    background: rgba(255,184,0,0.1) !important;
+    border-color: rgba(255,184,0,0.3) !important;
+    color: var(--gold) !important;
+    font-size: 16px !important;
+    padding: 8px 14px !important;
+  }
+  .btn-deploy:hover { background: rgba(255,184,0,0.2) !important; }
+  .btn-deploy.deploying { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ─── PAGES ─── */
   .page { display: none; }
@@ -741,6 +752,7 @@
   <button class="active" onclick="showPage('pronostic', this)">🇲🇦 Mon Pronostic</button>
   <button onclick="showPage('historique', this)" id="nav-histo">📋 Historique <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
   <button onclick="showPage('admin', this)">📊 Consolidation</button>
+  <button class="btn-deploy" id="btn-deploy" onclick="deployToGithub()" title="Publier sur GitHub Pages">🚀</button>
 </nav>
 
 <!-- ─── PAGE PRONOSTIC ─── -->
@@ -1311,6 +1323,36 @@ const _showPage = showPage;
 function showPage(name, btn) {
   _showPage(name, btn);
   if (name === 'historique') renderHistorique();
+}
+
+// ─── DEPLOY GITHUB ───
+function deployToGithub() {
+  const btn = document.getElementById('btn-deploy');
+  btn.textContent = '⏳';
+  btn.classList.add('deploying');
+  btn.disabled = true;
+
+  fetch('../api/deploy-github.php')
+    .then(r => r.json())
+    .then(data => {
+      btn.classList.remove('deploying');
+      btn.disabled = false;
+      if (data.ok) {
+        btn.textContent = '✅';
+        toast('✅ Publié sur GitHub Pages !');
+      } else {
+        btn.textContent = '❌';
+        toast('❌ Erreur de déploiement');
+      }
+      setTimeout(() => btn.textContent = '🚀', 3000);
+    })
+    .catch(() => {
+      btn.classList.remove('deploying');
+      btn.disabled = false;
+      btn.textContent = '❌';
+      toast('❌ Impossible de contacter le serveur');
+      setTimeout(() => btn.textContent = '🚀', 3000);
+    });
 }
 
 // ─── INIT ───
