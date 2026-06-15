@@ -829,9 +829,9 @@
           <img class="flag-img" src="https://flagcdn.com/w80/ma.png" alt="Maroc">
           <span class="team-name">Maroc</span>
           <div class="score-box">
-            <button onclick="change('m1a',1)">▲</button>
+            <button type="button" onclick="change('m1a',1)">▲</button>
             <span class="score-val" id="m1a-val">0</span>
-            <button onclick="change('m1a',-1)">▼</button>
+            <button type="button" onclick="change('m1a',-1)">▼</button>
           </div>
         </div>
         <div class="score-col"><span class="score-sep">—</span></div>
@@ -839,9 +839,9 @@
           <img class="flag-img" src="https://flagcdn.com/w80/gb-sct.png" alt="Écosse">
           <span class="team-name">Écosse</span>
           <div class="score-box">
-            <button onclick="change('m1b',1)">▲</button>
+            <button type="button" onclick="change('m1b',1)">▲</button>
             <span class="score-val" id="m1b-val">0</span>
-            <button onclick="change('m1b',-1)">▼</button>
+            <button type="button" onclick="change('m1b',-1)">▼</button>
           </div>
         </div>
       </div>
@@ -856,9 +856,9 @@
           <img class="flag-img" src="https://flagcdn.com/w80/ma.png" alt="Maroc">
           <span class="team-name">Maroc</span>
           <div class="score-box">
-            <button onclick="change('m2a',1)">▲</button>
+            <button type="button" onclick="change('m2a',1)">▲</button>
             <span class="score-val" id="m2a-val">0</span>
-            <button onclick="change('m2a',-1)">▼</button>
+            <button type="button" onclick="change('m2a',-1)">▼</button>
           </div>
         </div>
         <div class="score-col"><span class="score-sep">—</span></div>
@@ -866,9 +866,9 @@
           <img class="flag-img" src="https://flagcdn.com/w80/ht.png" alt="Haïti">
           <span class="team-name">Haïti</span>
           <div class="score-box">
-            <button onclick="change('m2b',1)">▲</button>
+            <button type="button" onclick="change('m2b',1)">▲</button>
             <span class="score-val" id="m2b-val">0</span>
-            <button onclick="change('m2b',-1)">▼</button>
+            <button type="button" onclick="change('m2b',-1)">▼</button>
           </div>
         </div>
       </div>
@@ -905,16 +905,9 @@
       </div>
     </div>
 
-    <button class="btn-export" onclick="exportPronostic()">
-      📧 Exporter mon pronostic
+    <button type="button" class="btn-export" onclick="exportPronostic()">
+      📤 Exporter mon pronostic
     </button>
-    <p class="export-note">Votre client mail s'ouvrira avec le pronostic pré-rempli<br>à destination de l'administrateur.</p>
-
-    <div id="success-box" class="success-box">
-      <h3>✅ Pronostic prêt !</h3>
-      <p>Si votre messagerie ne s'est pas ouverte, copiez le JSON ci-dessous<br>et envoyez-le manuellement à <strong>rkhouy@ocapitalgroup.ma</strong></p>
-      <button class="btn-copy" id="btn-copy-json" onclick="copyJSON()">📋 Copier le JSON</button>
-    </div>
 
   </div>
 </div>
