@@ -1555,9 +1555,15 @@
   .task-btn.move-edge:hover { color: var(--accent); }
 
   /* ── Planifiée badge ── */
+  .task-card.inprogress-card { border-left: 3px solid #e6b800; animation: progressPulse 2s ease-in-out infinite; }
+  @keyframes progressPulse { 0%,100%{box-shadow:0 0 0 0 rgba(230,184,0,0)} 50%{box-shadow:0 0 0 3px rgba(230,184,0,.25)} }
+  .inprogress-badge { display:inline-flex;align-items:center;gap:3px;font-size:.62rem;font-weight:700;
+    background:rgba(230,184,0,.15);color:#e6b800;border:1px solid rgba(230,184,0,.35);
+    border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:middle;animation:progressPulse 1.5s infinite; }
+  .inprogress-active { color:#e6b800 !important; font-weight:700; }
   .task-card.planned-card { border-left: 3px solid var(--q2-color); }
   .task-card.planned-card .task-top::before {
-    content: '📌'; font-size:.7rem; margin-right:4px; flex-shrink:0;
+  content: '📌'; font-size:.7rem; margin-right:4px; flex-shrink:0;
   }
   .planned-active { color: var(--q2-color) !important; font-weight:700; }
 
@@ -3011,7 +3017,7 @@ function renderQuad(q, filtered) {
 
 function makeCard(t) {
   const div = document.createElement('div');
-  div.className = 'task-card' + (t.status==='done'?' done':'') + (matrixSelected.has(t.id)?' mat-selected':'') + (t.planned?' planned-card':'');
+  div.className = 'task-card' + (t.status==='done'?' done':'') + (matrixSelected.has(t.id)?' mat-selected':'') + (t.planned?' planned-card':'') + (t.inProgress?' inprogress-card':'');
   div.draggable = true;
   div.dataset.id = t.id;
 
@@ -3102,7 +3108,7 @@ function makeCard(t) {
     <input type="checkbox" class="mat-checkbox" ${matrixSelected.has(t.id)?'checked':''} onclick="event.stopPropagation();toggleMatrixCard('${t.id}')">
     <div class="task-top">
       <div class="task-check" onclick="toggleDone('${t.id}',event)">${t.status==='done'?'✓':''}</div>
-      <div class="task-title">${escHtml(t.title)}</div>
+      <div class="task-title">${escHtml(t.title)}${t.inProgress?'<span class="inprogress-badge">⚙️ En cours</span>':''}</div>
     </div>
     <div class="task-meta">
       ${t.tag ? `<span class="task-tag tag-${t.tag}">${tagLabel(t.tag)}</span>` : ''}
@@ -3128,6 +3134,7 @@ function makeCard(t) {
       <button class="task-btn" onclick="toggleSeenToday('${t.id}',event)" title="${seenToday?'Retirer marque vue':'Marquer comme vu aujourd\'hui'}" style="color:${seenToday?'var(--q2-color)':'var(--text3)'}">${seenToday?'👁 Vu':'👁'}</button>
       <button class="task-btn" onclick="snoozeTask('${t.id}',event)" style="color:var(--text3)">📦 1 sem.</button>
       <button class="task-btn" onclick="copyTaskTitle('${t.id}',event)" title="Copier le titre">📋 Copier</button>
+      <button class="task-btn ${t.inProgress?'inprogress-active':''}" onclick="toggleInProgress('${t.id}',event)" title="${t.inProgress?'Retirer En cours':'Marquer En cours de traitement'}" style="color:${t.inProgress?'#e6b800':'var(--text3)'}">⚙️${t.inProgress?' En cours':''}</button>
       <button class="task-btn ${t.planned?'planned-active':''}" onclick="togglePlanned('${t.id}',event)" title="${t.planned?'Retirer planifiée':'Marquer comme planifiée'}" style="color:${t.planned?'var(--q2-color)':'var(--text3)'}">📌${t.planned?' Planifiée':''}</button>
       <button class="task-btn" onclick="addToCalendar('${t.id}')" title="Ajouter à Google Agenda" style="color:var(--q2-color)">📅 Agenda</button>
       <button class="task-btn" onclick="emailTask('${t.id}')" title="Envoyer par email">📧 Email</button>
@@ -5727,6 +5734,16 @@ function copyFreeNoteTitle(id)     { const n=freeNotes.find(x=>x.id===id); if(n)
 // ═══════════════════════════════════════════════
 //  PLANIFIÉE
 // ═══════════════════════════════════════════════
+function toggleInProgress(id, e) {
+  if (e) e.stopPropagation();
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  pushHistory(`${t.inProgress?'Retiré':'Marqué'} "En cours" — "${t.title}"`);
+  t.inProgress = !t.inProgress;
+  save(); renderAll();
+  toast(t.inProgress ? '⚙️ En cours de traitement' : '⚙️ Retiré des tâches en cours', t.inProgress ? 'info' : 'info');
+}
+
 function togglePlanned(id, e) {
   if (e) e.stopPropagation();
   const t = tasks.find(x => x.id === id);
