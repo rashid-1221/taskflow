@@ -750,7 +750,7 @@
 <!-- ─── NAV ─── -->
 <nav class="nav">
   <button class="active" onclick="showPage('pronostic', this)">🇲🇦 Mon Pronostic</button>
-  <button onclick="showPage('historique', this)" id="nav-histo">🏆 Pronostics Équipe <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
+  <button onclick="showPage('historique', this); renderHistorique();" id="nav-histo">🏆 Pronostics Équipe <span class="nav-badge" id="histo-badge" style="display:none">0</span></button>
   <button onclick="showPage('admin', this)">📊 Consolidation</button>
   <button class="btn-deploy" id="btn-deploy" onclick="deployToGithub()" title="Publier sur GitHub Pages">🚀</button>
 </nav>
@@ -1333,12 +1333,6 @@ function clearHistorique() {
   toast('Historique effacé');
 }
 
-// Surcharge showPage pour charger l'historique à l'ouverture
-const _showPage = showPage;
-function showPage(name, btn) {
-  _showPage(name, btn);
-  if (name === 'historique') renderHistorique();
-}
 
 // ─── DEPLOY GITHUB ───
 function deployToGithub() {
