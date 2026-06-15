@@ -1251,14 +1251,16 @@ function renderHistorique(silent) {
   const container = document.getElementById('histo-list');
   const countEl   = document.getElementById('histo-count');
 
-  if (!silent) {
-    container.innerHTML = `<div class="histo-empty"><div class="icon">⏳</div><p>Chargement...</p></div>`;
-  }
+  // Affiche immédiatement les données locales
+  renderList(getHistorique());
 
-  fetch(API_BASE + '/list.php?t=' + Date.now())
+  // Tente de récupérer les données serveur avec timeout 4s
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), 4000);
+  fetch(API_BASE + '/list.php?t=' + Date.now(), { signal: ctrl.signal })
     .then(r => r.json())
-    .then(list => renderList(list))
-    .catch(() => renderList(getHistorique()));
+    .then(list => { if (Array.isArray(list) && list.length > 0) renderList(list); })
+    .catch(() => {}); // silencieux si serveur indisponible
 
   function renderList(list) {
     updateHistoBadge(list.length);
