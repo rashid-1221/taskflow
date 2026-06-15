@@ -1831,8 +1831,8 @@
     <button class="btn-icon mobile-hide" onclick="openArchive()">📦 Archive</button>
     <button class="btn-icon mobile-hide" onclick="shareByEmail()">📧 Email</button>
     <button class="btn-icon mobile-hide" onclick="saveToServer('manual')">💾 Sauvegarder</button>
-    <button class="btn-icon" id="btn-firebase" onclick="openFirebaseModal()" title="Se connecter à Firebase" style="color:var(--text3);">🔥 Fire</button>
-    <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);">🚀 Git</button>
+    <button class="btn-icon" id="btn-firebase" onclick="openFirebaseModal()" title="Se connecter à Firebase" style="color:var(--text3);display:none;">🔥 Fire</button>
+    <button class="btn-icon" id="btn-deploy" onclick="deployToGitHub()" title="Envoyer les modifications sur GitHub" style="color:#e6b800;border-color:rgba(230,184,0,.35);display:none;">🚀 Git</button>
     <button class="btn-icon mobile-hide" onclick="openRestoreModal()" style="color:var(--q2-color);border-color:rgba(63,185,80,.3)">↩ Restaurer</button>
     <button class="btn-icon mobile-hide" onclick="clearDone()">🧹 Nettoyer</button>
     <div class="search-wrap mobile-hide">
@@ -1896,7 +1896,7 @@
       <button class="drawer-btn" onclick="closeMobileDrawer();saveToServer('manual')">
         <span class="db-icon">💾</span>Sauvegarder
       </button>
-      <button class="drawer-btn" onclick="closeMobileDrawer();deployToGitHub()" style="color:#e6b800;">
+      <button class="drawer-btn" id="btn-deploy-mobile" onclick="closeMobileDrawer();deployToGitHub()" style="color:#e6b800;display:none;">
         <span class="db-icon">🚀</span>GitHub
       </button>
       <button class="drawer-btn" onclick="closeMobileDrawer();openRestoreModal()" style="color:var(--q2-color)">
@@ -8386,12 +8386,23 @@ function updateFbLastSync() {
 }
 
 function updateFbHeaderBtn() {
-  const btn = document.getElementById('btn-firebase');
-  if (!btn) return;
-  const connected = !!fbAuth.currentUser;
-  btn.style.color       = connected ? 'var(--q2-color)' : 'var(--text3)';
-  btn.style.borderColor = connected ? 'rgba(63,185,80,.35)' : '';
-  btn.title = connected ? 'Firebase connecté ✅' : 'Se connecter à Firebase';
+  const btn       = document.getElementById('btn-firebase');
+  const btnDeploy = document.getElementById('btn-deploy');
+  const btnDeployMobile = document.getElementById('btn-deploy-mobile');
+  const user      = fbAuth.currentUser;
+  const isAdmin   = user && user.email === 'rashidkhouy@gmail.com';
+  const connected = !!user;
+
+  // Bouton Firebase : visible uniquement pour rashidkhouy@gmail.com
+  if (btn) {
+    btn.style.display     = isAdmin ? '' : 'none';
+    btn.style.color       = connected ? 'var(--q2-color)' : 'var(--text3)';
+    btn.style.borderColor = connected ? 'rgba(63,185,80,.35)' : '';
+    btn.title = connected ? 'Firebase connecté ✅' : 'Se connecter à Firebase';
+  }
+  // Bouton GitHub deploy : visible uniquement pour rashidkhouy@gmail.com
+  if (btnDeploy)       btnDeploy.style.display       = isAdmin ? '' : 'none';
+  if (btnDeployMobile) btnDeployMobile.style.display  = isAdmin ? '' : 'none';
 }
 
 // Fermer modal si clic hors
