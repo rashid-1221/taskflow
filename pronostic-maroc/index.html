@@ -1112,11 +1112,11 @@ function renderHistorique(silent) {
       }).join('');
 
       const isMe = d.nom === (localStorage.getItem(MY_NAME_KEY) || '');
-      const actions = isMe ? `
+      const actions = `
         <div class="histo-actions">
-          <button class="btn-histo-edit" onclick="editMyPronostic()" title="Modifier">✏️ Modifier</button>
-          <button class="btn-histo-del"  onclick="deleteMyPronostic('${esc(d.nom)}')" title="Supprimer">🗑 Supprimer</button>
-        </div>` : '';
+          ${isMe ? `<button class="btn-histo-edit" onclick="editMyPronostic()" title="Modifier">✏️ Modifier</button>` : ''}
+          <button class="btn-histo-del" onclick="deleteMyPronostic('${esc(d.nom)}')" title="Supprimer">🗑 Supprimer</button>
+        </div>`;
 
       return `
         <div class="histo-card${isMe ? ' my-card' : ''}">
