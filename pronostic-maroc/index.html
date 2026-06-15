@@ -1202,8 +1202,24 @@ function clearHistorique() {
 
 
 // ─── INIT ───
-updateBadge('m1'); updateBadge('m2');
-updateHistoBadge(getHistorique().length);
+if (location.protocol === 'file:') {
+  document.body.innerHTML = `
+    <div style="font-family:sans-serif;text-align:center;padding:60px 20px;background:#0d0d0d;min-height:100vh;color:#fff">
+      <div style="font-size:48px;margin-bottom:20px">⚠️</div>
+      <h2 style="color:#FFB800;margin-bottom:12px">Mauvaise URL !</h2>
+      <p style="color:#aaa;margin-bottom:24px;font-size:15px">
+        Vous avez ouvert l'app via <code style="color:#ef5350">file:///</code><br>
+        Le serveur PHP ne peut pas fonctionner ainsi.
+      </p>
+      <a href="http://localhost:8080/taskflow/pronostic-maroc/"
+         style="display:inline-block;padding:14px 28px;background:#C1272D;color:#fff;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px">
+        ✅ Ouvrir correctement
+      </a>
+    </div>`;
+} else {
+  updateBadge('m1'); updateBadge('m2');
+  updateHistoBadge(getHistorique().length);
+}
 </script>
 </body>
 </html>
