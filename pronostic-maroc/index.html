@@ -702,6 +702,43 @@
   .histo-score.loss { background: rgba(193,39,45,0.25); color: #ef5350; }
   .histo-score.lock { background: rgba(255,255,255,0.05); color: var(--muted); font-size: 12px; }
 
+  .my-card { border-color: rgba(255,184,0,0.3) !important; }
+  .my-card::before { background: linear-gradient(90deg, var(--gold), var(--green)) !important; }
+  .me-badge {
+    display: inline-block;
+    background: rgba(255,184,0,0.2);
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .histo-actions { display: flex; gap: 6px; align-items: center; }
+  .btn-histo-edit {
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,184,0,0.35);
+    background: rgba(255,184,0,0.1);
+    color: var(--gold);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-histo-edit:hover { background: rgba(255,184,0,0.22); }
+  .btn-histo-del {
+    padding: 5px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(193,39,45,0.35);
+    background: rgba(193,39,45,0.1);
+    color: #ef5350;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .btn-histo-del:hover { background: rgba(193,39,45,0.22); }
+
   .histo-empty {
     text-align: center;
     padding: 60px 20px;
@@ -1028,6 +1065,7 @@ function exportPronostic() {
   lastJSON = JSON.stringify(data);
 
   // ── Sauvegarde locale immédiate (pas d'attente serveur) ──
+  localStorage.setItem(MY_NAME_KEY, data.nom);
   saveToHistorique(data);
   const btnExport = document.querySelector('.btn-export');
   btnExport.textContent = '✅ Pronostic enregistré !';
@@ -1223,7 +1261,8 @@ function toast(msg) {
 }
 
 // ─── HISTORIQUE ───
-const HISTO_KEY = 'pronostic_maroc_historique';
+const HISTO_KEY    = 'pronostic_maroc_historique';
+const MY_NAME_KEY  = 'pronostic_maroc_myname';
 
 function getHistorique() {
   try { return JSON.parse(localStorage.getItem(HISTO_KEY) || '[]'); } catch { return []; }
@@ -1294,18 +1333,69 @@ function renderHistorique(silent) {
           </div>`;
       }).join('');
 
+      const isMe = d.nom === (localStorage.getItem(MY_NAME_KEY) || '');
+      const actions = isMe ? `
+        <div class="histo-actions">
+          <button class="btn-histo-edit" onclick="editMyPronostic()" title="Modifier">✏️ Modifier</button>
+          <button class="btn-histo-del"  onclick="deleteMyPronostic('${esc(d.nom)}')" title="Supprimer">🗑</button>
+        </div>` : '';
+
       return `
-        <div class="histo-card">
+        <div class="histo-card${isMe ? ' my-card' : ''}">
           <div class="histo-card-header">
             <div>
-              <div class="histo-name">🇲🇦 ${esc(d.nom)}</div>
+              <div class="histo-name">🇲🇦 ${esc(d.nom)}${isMe ? ' <span class="me-badge">Moi</span>' : ''}</div>
               <div class="histo-date">${date}</div>
             </div>
+            ${actions}
           </div>
           <div class="histo-matches">${matchRows}</div>
         </div>`;
     }).join('');
   }
+}
+
+function editMyPronostic() {
+  // Pré-remplir le formulaire avec les données sauvegardées
+  const myName = localStorage.getItem(MY_NAME_KEY) || '';
+  const local  = getHistorique().find(e => e.nom === myName);
+  if (local) {
+    const parts = local.nom.split(' ');
+    document.getElementById('prenom').value = parts[0] || '';
+    document.getElementById('nom').value    = parts.slice(1).join(' ') || '';
+    if (local.matches[0]) { SCORES.m1a = local.matches[0].maroc || 0; SCORES.m1b = local.matches[0].adversaire || 0; }
+    if (local.matches[1]) { SCORES.m2a = local.matches[1].maroc || 0; SCORES.m2b = local.matches[1].adversaire || 0; }
+    ['m1a','m1b','m2a','m2b'].forEach(k => document.getElementById(k+'-val').textContent = SCORES[k]);
+    updateBadge('m1'); updateBadge('m2');
+  }
+  stopHistoRefresh();
+  const navBtns = document.querySelectorAll('.nav button');
+  navBtns.forEach(b => b.classList.remove('active'));
+  navBtns[0].classList.add('active');
+  showPage('pronostic', navBtns[0]);
+  toast('✏️ Modifiez vos scores puis cliquez Exporter');
+}
+
+function deleteMyPronostic(nom) {
+  if (!confirm(`Supprimer le pronostic de "${nom}" ?`)) return;
+
+  // Suppression locale
+  const local = getHistorique().filter(e => e.nom !== nom);
+  saveHistorique(local);
+  localStorage.removeItem(MY_NAME_KEY);
+
+  // Suppression serveur en arrière-plan
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), 5000);
+  fetch(API_BASE + '/delete.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nom }),
+    signal: ctrl.signal
+  }).catch(() => {});
+
+  renderHistorique();
+  toast('🗑 Pronostic supprimé');
 }
 
 function startHistoRefresh() {
