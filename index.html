@@ -1729,10 +1729,14 @@
   .fn-sn-check:hover { border-color:var(--q2-color); }
   .fn-sn-item.fn-sn-done .fn-sn-check { background:var(--q2-color); border-color:var(--q2-color); color:#000; }
   .fn-sn-text { flex:1; }
-  .fn-sn-del { background:none; border:none; color:transparent; cursor:pointer;
+  .fn-sn-del, .fn-sn-edit { background:none; border:none; color:transparent; cursor:pointer;
     font-size:.65rem; padding:0 2px; transition:var(--trans); }
-  .fn-sn-item:hover .fn-sn-del { color:var(--text3); }
-  .fn-sn-del:hover { color:var(--q1-color) !important; }
+  .fn-sn-item:hover .fn-sn-del,
+  .fn-sn-item:hover .fn-sn-edit { color:var(--text3); }
+  .fn-sn-del:hover  { color:var(--q1-color) !important; }
+  .fn-sn-edit:hover { color:var(--accent) !important; }
+  .fn-sn-edit-input { flex:1; font-size:.75rem; background:var(--bg3); border:1px solid var(--accent);
+    border-radius:5px; padding:2px 6px; color:var(--text); outline:none; }
   .fn-add-sn-form { display:none; align-items:center; gap:6px; margin-top:2px; }
   .fn-add-sn-form.open { display:flex; }
   .fn-add-sn-input { flex:1; background:var(--bg3); border:1px solid var(--border);
@@ -2651,6 +2655,7 @@ async function serverPush() {
         todayTasks,
         focusTasks,
         freeNotes,
+        customQuads,
         savedAt: new Date().toISOString(),
       }
     };
@@ -2691,11 +2696,21 @@ async function serverPull() {
         freeNotes = d.freeNotes;
         localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
       }
+      if (Array.isArray(d.customQuads) && d.customQuads.length > 0) {
+        // Fusionner : conserver les built-ins locaux, ajouter les custom du serveur
+        const builtinIds = ['builtin-amelioration', 'builtin-planned'];
+        const serverCq = d.customQuads.filter(cq => !builtinIds.includes(cq.id));
+        const builtins = customQuads.filter(cq => builtinIds.includes(cq.id));
+        customQuads = [...builtins, ...serverCq];
+        localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
+        populateQuadSelects();
+      }
       localStorage.setItem(SERVER_TS_KEY, json.savedAt);
       renderAll();
       if (typeof renderToday === 'function')    renderToday();
       if (typeof renderFocus === 'function')    renderFocus();
       if (typeof renderFreeNotes === 'function') renderFreeNotes();
+      if (typeof renderCustomQuads === 'function') renderCustomQuads();
       setSyncDotLocal('ok');
       toast('📲 Données rechargées depuis le serveur', 'info');
     } else {
@@ -7229,6 +7244,7 @@ function renderFreeNotes() {
       <div class="fn-sn-item${sn.done?' fn-sn-done':''}" id="fn-sni-${n.id}-${i}">
         <div class="fn-sn-check" onclick="toggleFnSubnote('${n.id}',${i})">${sn.done?'✓':''}</div>
         <span class="fn-sn-text">${escHtml(sn.text)}</span>
+        <button class="fn-sn-edit" onclick="editFnSubnote('${n.id}',${i})" title="Éditer">✏️</button>
         <button class="fn-sn-del" onclick="deleteFnSubnote('${n.id}',${i})">✕</button>
       </div>`).join('');
     const snCount = n.subnotes.length ? `<span style="font-size:.68rem;color:var(--text3);margin-left:4px">(${n.subnotes.filter(s=>s.done).length}/${n.subnotes.length})</span>` : '';
@@ -7511,6 +7527,7 @@ function saveFnSubnote(nid) {
     item.innerHTML = `
       <div class="fn-sn-check" onclick="toggleFnSubnote('${nid}',${i})"></div>
       <span class="fn-sn-text">${escHtml(text)}</span>
+      <button class="fn-sn-edit" onclick="editFnSubnote('${nid}',${i})" title="Éditer">✏️</button>
       <button class="fn-sn-del" onclick="deleteFnSubnote('${nid}',${i})">✕</button>`;
     list.appendChild(item);
   }
@@ -7536,6 +7553,57 @@ function deleteFnSubnote(nid, idx) {
   n.updatedAt = Date.now();
   saveFreeNotes();
   renderFreeNotes();
+}
+function editFnSubnote(nid, idx) {
+  const n = freeNotes.find(x => x.id === nid);
+  if (!n?.subnotes?.[idx]) return;
+  const item = document.getElementById(`fn-sni-${nid}-${idx}`);
+  if (!item) return;
+  const sn = n.subnotes[idx];
+  item.innerHTML = `
+    <input class="fn-sn-edit-input" id="fn-sni-edit-${nid}-${idx}" value="${escHtml(sn.text)}" />
+    <button class="subnote-ok"     onclick="saveFnSubnoteEdit('${nid}',${idx})">✓</button>
+    <button class="subnote-cancel" onclick="cancelFnSubnoteEdit('${nid}',${idx})">✕</button>`;
+  const inp = document.getElementById(`fn-sni-edit-${nid}-${idx}`);
+  inp?.focus(); inp?.select();
+  inp?.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter')  { ev.preventDefault(); saveFnSubnoteEdit(nid, idx); }
+    if (ev.key === 'Escape') { ev.preventDefault(); cancelFnSubnoteEdit(nid, idx); }
+  });
+}
+function saveFnSubnoteEdit(nid, idx) {
+  const inp = document.getElementById(`fn-sni-edit-${nid}-${idx}`);
+  const text = inp?.value?.trim();
+  if (!text) { inp?.focus(); return; }
+  const n = freeNotes.find(x => x.id === nid);
+  if (!n?.subnotes?.[idx]) return;
+  n.subnotes[idx].text = text;
+  n.updatedAt = Date.now();
+  saveFreeNotes();
+  const item = document.getElementById(`fn-sni-${nid}-${idx}`);
+  if (item) {
+    const done = n.subnotes[idx].done;
+    item.className = `fn-sn-item${done ? ' fn-sn-done' : ''}`;
+    item.innerHTML = `
+      <div class="fn-sn-check" onclick="toggleFnSubnote('${nid}',${idx})">${done ? '✓' : ''}</div>
+      <span class="fn-sn-text">${escHtml(text)}</span>
+      <button class="fn-sn-edit" onclick="editFnSubnote('${nid}',${idx})" title="Éditer">✏️</button>
+      <button class="fn-sn-del" onclick="deleteFnSubnote('${nid}',${idx})">✕</button>`;
+  }
+}
+function cancelFnSubnoteEdit(nid, idx) {
+  const n = freeNotes.find(x => x.id === nid);
+  if (!n?.subnotes?.[idx]) return;
+  const sn = n.subnotes[idx];
+  const item = document.getElementById(`fn-sni-${nid}-${idx}`);
+  if (item) {
+    item.className = `fn-sn-item${sn.done ? ' fn-sn-done' : ''}`;
+    item.innerHTML = `
+      <div class="fn-sn-check" onclick="toggleFnSubnote('${nid}',${idx})">${sn.done ? '✓' : ''}</div>
+      <span class="fn-sn-text">${escHtml(sn.text)}</span>
+      <button class="fn-sn-edit" onclick="editFnSubnote('${nid}',${idx})" title="Éditer">✏️</button>
+      <button class="fn-sn-del" onclick="deleteFnSubnote('${nid}',${idx})">✕</button>`;
+  }
 }
 
 // Init on load
@@ -7573,6 +7641,7 @@ let selectedQuadColor = '#9c59d1';
 function saveCustomQuads() {
   localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
   populateQuadSelects();
+  scheduleServerPush();
 }
 
 // ── Populer dynamiquement tous les <select> de quadrant ──────────────────────
@@ -7619,6 +7688,8 @@ function confirmAddQuad() {
   customQuads.push({ id, label: name, color: selectedQuadColor });
   saveCustomQuads(); // appelle déjà populateQuadSelects()
   closeAddQuadModal();
+  renderAll();
+  renderToday();     // force le refresh du select "Classer" même si vue Matrice active
   renderCustomQuads();
   toast(`Matrice "${name}" créée ✓`, 'success');
 }
