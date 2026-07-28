@@ -2195,6 +2195,7 @@
   <!-- Custom quadrants row -->
   <div style="max-width:1400px;margin:0 auto;padding:0 24px 14px;">
     <div id="custom-quads-row" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px;"></div>
+    <div id="orphan-tasks-notice" style="display:none;margin:8px 0;padding:10px 14px;background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.35);border-radius:8px;font-size:.8rem;color:var(--text2);"></div>
     <div style="padding:4px 0 8px;">
       <button class="filter-chip" onclick="openAddQuadModal()" style="border-style:dashed;color:var(--text3)">⊕ Ajouter une matrice</button>
     </div>
@@ -2696,12 +2697,13 @@ async function serverPull() {
         freeNotes = d.freeNotes;
         localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
       }
-      if (Array.isArray(d.customQuads) && d.customQuads.length > 0) {
-        // Fusionner : conserver les built-ins locaux, ajouter les custom du serveur
-        const builtinIds = ['builtin-amelioration', 'builtin-planned'];
-        const serverCq = d.customQuads.filter(cq => !builtinIds.includes(cq.id));
-        const builtins = customQuads.filter(cq => builtinIds.includes(cq.id));
-        customQuads = [...builtins, ...serverCq];
+      if (Array.isArray(d.customQuads)) {
+        // Fusionner : union locale + serveur — jamais écraser une matrice locale
+        const merged = [...customQuads];
+        d.customQuads.forEach(scq => {
+          if (!merged.find(lcq => lcq.id === scq.id)) merged.push(scq);
+        });
+        customQuads = merged;
         localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
         populateQuadSelects();
       }
@@ -3683,6 +3685,28 @@ function toggleFocusDone(id) {
 }
 
 // Renvoie une tâche focus vers son origine (Aujourd'hui ou Matrice)
+function sendFocusToToday(id) {
+  const t = focusTasks.find(x => x.id === id);
+  if (!t) return;
+  if (todayTasks.some(td => td.originTaskId === (t.originTaskId || t.id) || td.id === t.id)) {
+    toast('Déjà dans la liste du jour ☀️', 'info'); return;
+  }
+  pushHistory(`Focus → Aujourd'hui "${t.title}"`);
+  // Mettre à jour la tâche d'origine si elle existe
+  const orig = t.originTaskId ? tasks.find(x => x.id === t.originTaskId) : null;
+  if (orig) { delete orig.inFocus; orig.inToday = true; }
+  todayTasks.push({
+    id: uid(), title: t.title, done: !!t.done,
+    originQuad: t.originQuad, originTaskId: t.originTaskId || t.id,
+    notes: t.notes || [], subnotes: t.subnotes || [],
+    createdAt: t.createdAt || Date.now(), addedAt: Date.now()
+  });
+  focusTasks = focusTasks.filter(x => x.id !== id);
+  save(); saveToday(); saveFocusList();
+  renderAll(); renderFocus();
+  toast(`☀️ "${t.title}" déplacée vers Aujourd'hui`, 'gold');
+}
+
 function returnFromFocus(id, silent) {
   const t = focusTasks.find(x => x.id === id);
   if (!t) return;
@@ -3781,6 +3805,7 @@ function renderFocus() {
         <button class="task-btn move-btn" onclick="moveFocusItem('${t.id}',+1,event)" title="Descendre">▼</button>
         <button class="task-btn move-btn move-edge" onclick="moveFocusToBottom('${t.id}',event)" title="Fin de liste">⤓</button>
         <button class="fi-btn fi-return" onclick="returnFromFocus('${t.id}')" title="Renvoyer vers ${t.from === 'today' ? "Aujourd'hui" : 'la matrice'}">↩ Renvoyer</button>
+        <button class="fi-btn" onclick="sendFocusToToday('${t.id}')" title="Déplacer vers Aujourd'hui" style="color:var(--gold)">☀️ Aujourd'hui</button>
         <button class="fi-btn" onclick="openMoveFocus('${t.id}')" title="Classer dans une matrice">↗ Déplacer</button>
         <button class="fi-btn" onclick="openFiSubnoteForm('${t.id}',event)">📝 Sous-note</button>
         <button class="fi-btn" onclick="toggleFiCommentForm('${t.id}')">💬 Note</button>
@@ -7641,7 +7666,7 @@ let selectedQuadColor = '#9c59d1';
 function saveCustomQuads() {
   localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
   populateQuadSelects();
-  scheduleServerPush();
+  serverPush(); // push immédiat — pas de délai pour éviter la perte sur pull suivant
 }
 
 // ── Populer dynamiquement tous les <select> de quadrant ──────────────────────
@@ -7681,6 +7706,39 @@ function selectQuadColor(color, el) {
   document.querySelectorAll('.qcp-dot').forEach(d => d.classList.remove('selected'));
   el.classList.add('selected');
 }
+// ── Tâches orphelines (quad ID introuvable) ──────────────────────────────────
+function getOrphanTasks() {
+  const knownIds = new Set(['q1','q2','q3','q4', ...customQuads.map(c=>c.id)]);
+  return tasks.filter(t =>
+    t.status !== 'archived' && t.status !== 'deleted' &&
+    !t.inToday && !t.inFocus && !knownIds.has(t.quad)
+  );
+}
+
+function updateOrphanNotice() {
+  const orphans = getOrphanTasks();
+  const notice = document.getElementById('orphan-tasks-notice');
+  if (!notice) return;
+  if (!orphans.length) { notice.style.display = 'none'; return; }
+  notice.style.display = 'block';
+  const ids = [...new Set(orphans.map(t => t.quad))];
+  notice.innerHTML = `⚠️ <strong>${orphans.length} tâche${orphans.length>1?'s':''}</strong> orpheline${orphans.length>1?'s':''} — leur matrice d'origine a disparu.
+    <button onclick="recoverOrphansToQ4()" style="margin-left:10px;background:none;border:1px solid rgba(248,81,73,.5);border-radius:5px;padding:2px 8px;color:var(--q1-color);cursor:pointer;font-size:.75rem;">→ Récupérer dans Q4</button>
+    ${customQuads.filter(cq=>!['builtin-amelioration','builtin-planned'].includes(cq.id)).map(cq=>
+      `<button onclick="recoverOrphansTo('${cq.id}')" style="margin-left:6px;background:none;border:1px solid ${cq.color}55;border-radius:5px;padding:2px 8px;color:${cq.color};cursor:pointer;font-size:.75rem;">→ ${cq.label}</button>`
+    ).join('')}`;
+}
+
+function recoverOrphansToQ4() { recoverOrphansTo('q4'); }
+function recoverOrphansTo(targetQuad) {
+  const orphans = getOrphanTasks();
+  if (!orphans.length) return;
+  orphans.forEach(t => { t.quad = targetQuad; });
+  save(); renderAll(); renderCustomQuads(); updateOrphanNotice();
+  const lbl = targetQuad === 'q4' ? 'Q4' : (customQuads.find(c=>c.id===targetQuad)?.label || targetQuad);
+  toast(`${orphans.length} tâche${orphans.length>1?'s':''} récupérée${orphans.length>1?'s':''} → ${lbl} ✓`, 'success');
+}
+
 function confirmAddQuad() {
   const name = document.getElementById('new-quad-name').value.trim();
   if (!name) { toast('Entre un nom pour la matrice', 'error'); return; }
@@ -7691,6 +7749,7 @@ function confirmAddQuad() {
   renderAll();
   renderToday();     // force le refresh du select "Classer" même si vue Matrice active
   renderCustomQuads();
+  updateOrphanNotice(); // rafraîchir les boutons de récupération avec la nouvelle matrice
   toast(`Matrice "${name}" créée ✓`, 'success');
 }
 function deleteCustomQuad(id) {
@@ -7706,6 +7765,7 @@ function renderCustomQuads(filtered) {
   const row = document.getElementById('custom-quads-row');
   if (!row) return;
   row.innerHTML = '';
+  updateOrphanNotice();
   customQuads.forEach((cq, idx) => {
     const allInCQ   = tasks.filter(t => t.quad === cq.id && t.status !== 'archived' && t.status !== 'deleted');
     const shown     = filtered.filter(t => t.quad === cq.id);
