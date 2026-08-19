@@ -2615,7 +2615,14 @@ function load() {
   try { tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch(e) { tasks = []; }
 }
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); scheduleServerPush(); fbSyncOnSave(); }
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  // Marque les données locales comme "fraîches" pour éviter qu'un pull Firebase
+  // basé sur un ancien timestamp de sync n'écrase ces modifications avant leur envoi.
+  localStorage.setItem('taskflow_fb_lastsync_at', new Date().toISOString());
+  scheduleServerPush();
+  fbSyncOnSave();
+}
 
 function loadToday() {
   try { todayTasks = JSON.parse(localStorage.getItem(TODAY_KEY)) || []; }
@@ -8377,7 +8384,7 @@ const fbAuth = firebase.auth();
 const fbDb   = firebase.firestore();
 // Persister la session même après fermeture du navigateur
 fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-let fbAutoSync = true; // toujours actif quand connecté
+let fbAutoSync = localStorage.getItem('taskflow_fb_autosync') === '1'; // manuel par défaut
 let _fbSnapshotUnsub = null; // listener temps réel
 let _fbPushTimeout   = null; // debounce push
 let _fbApplyingRemote = false; // évite les boucles
@@ -8388,10 +8395,12 @@ fbAuth.onAuthStateChanged(user => {
     document.getElementById('fb-login-form').style.display      = 'none';
     document.getElementById('fb-connected-panel').style.display = 'flex';
     document.getElementById('fb-user-email').textContent        = user.email;
-    document.getElementById('fb-autosync').checked              = true;
+    document.getElementById('fb-autosync').checked              = fbAutoSync;
     updateFbLastSync();
-    _startFirebaseListener(user);   // écoute temps réel
-    _firebasePullIfNewer();         // pull uniquement si Firebase est plus récent
+    if (fbAutoSync) {
+      _startFirebaseListener(user);   // écoute temps réel
+      _firebasePullIfNewer();         // pull uniquement si Firebase est plus récent
+    }
   } else {
     document.getElementById('fb-login-form').style.display      = 'block';
     document.getElementById('fb-connected-panel').style.display = 'none';
@@ -8455,6 +8464,16 @@ function fbSyncOnSave() {
   clearTimeout(_fbPushTimeout);
   _fbPushTimeout = setTimeout(() => firebasePush(true), 2000);
 }
+
+// Envoie immédiatement le push en attente si l'onglet se ferme/passe en arrière-plan,
+// pour éviter de perdre des modifications non encore envoyées à Firebase.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && _fbPushTimeout) {
+    clearTimeout(_fbPushTimeout);
+    _fbPushTimeout = null;
+    firebasePush(true);
+  }
+});
 
 // ── Modal ──────────────────────────────────────
 function openFirebaseModal()  {
@@ -8520,9 +8539,20 @@ async function firebasePull() {
   }
 }
 
-// ── Auto-sync (toujours actif quand connecté) ──
+// ── Auto-sync (activable/désactivable, manuel par défaut) ──
 function toggleFirebaseAutoSync(on) {
-  toast('🔄 Auto-sync toujours actif quand connecté', 'info');
+  fbAutoSync = on;
+  localStorage.setItem('taskflow_fb_autosync', on ? '1' : '0');
+  const user = fbAuth.currentUser;
+  if (on && user) {
+    _startFirebaseListener(user);
+    _firebasePullIfNewer();
+  } else if (!on) {
+    if (_fbSnapshotUnsub) { _fbSnapshotUnsub(); _fbSnapshotUnsub = null; }
+    clearTimeout(_fbPushTimeout);
+    _fbPushTimeout = null;
+  }
+  toast(on ? '🔄 Sync automatique activée' : '✋ Sync manuelle uniquement — utilise les boutons Envoyer/Recevoir', 'info');
 }
 
 // ── Helpers ────────────────────────────────────
