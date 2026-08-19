@@ -2538,6 +2538,11 @@
 const STORAGE_KEY  = 'taskflow_v3';
 const TODAY_KEY    = 'taskflow_today_v2';
 
+// Stub temporaire : le vrai fbSyncOnSave() est redéfini plus bas une fois le
+// script Firebase chargé. Évite un crash si save() est appelé avant (ex: état
+// initial vide) ou si le CDN Firebase est bloqué/indisponible.
+function fbSyncOnSave() {}
+
 const QUADS = {
   q1: { label:'Q1 — Urgent & Important',        color:'var(--q1-color)', dot:'#f85149', icon:'⚡', action:'Faire maintenant' },
   q2: { label:'Q2 — Important & Non Urgent',    color:'var(--q2-color)', dot:'#3fb950', icon:'📅', action:'Planifier' },
@@ -2628,7 +2633,7 @@ function loadToday() {
   try { todayTasks = JSON.parse(localStorage.getItem(TODAY_KEY)) || []; }
   catch(e) { todayTasks = []; }
 }
-function saveToday() { localStorage.setItem(TODAY_KEY, JSON.stringify(todayTasks)); scheduleServerPush(); }
+function saveToday() { localStorage.setItem(TODAY_KEY, JSON.stringify(todayTasks)); scheduleServerPush(); fbSyncOnSave(); }
 
 // ═══════════════════════════════════════════════
 //  SYNC SERVEUR LOCAL (accès multi-appareils)
@@ -3574,6 +3579,7 @@ catch(e) { focusTasks = []; }
 function saveFocusList() {
   localStorage.setItem(FOCUS_LIST_KEY, JSON.stringify(focusTasks));
   scheduleServerPush();
+  fbSyncOnSave();
   try { renderPostit(); } catch(e) {}
 }
 
@@ -7161,6 +7167,7 @@ let _saveNoteTimer = null;
 function saveFreeNotes() {
   localStorage.setItem('taskflow_free_notes', JSON.stringify(freeNotes));
   scheduleServerPush();
+  fbSyncOnSave();
   updateFreeNotesBadge();
   // Indicateur visuel discret "✓ Sauvegardé"
   clearTimeout(_saveNoteTimer);
@@ -7674,6 +7681,7 @@ function saveCustomQuads() {
   localStorage.setItem('taskflow_custom_quads', JSON.stringify(customQuads));
   populateQuadSelects();
   serverPush(); // push immédiat — pas de délai pour éviter la perte sur pull suivant
+  fbSyncOnSave();
 }
 
 // ── Populer dynamiquement tous les <select> de quadrant ──────────────────────
@@ -8397,9 +8405,9 @@ fbAuth.onAuthStateChanged(user => {
     document.getElementById('fb-user-email').textContent        = user.email;
     document.getElementById('fb-autosync').checked              = fbAutoSync;
     updateFbLastSync();
+    _firebasePullIfNewer();           // toujours : récupère la dernière version au démarrage, sans écraser des modifs locales non envoyées
     if (fbAutoSync) {
-      _startFirebaseListener(user);   // écoute temps réel
-      _firebasePullIfNewer();         // pull uniquement si Firebase est plus récent
+      _startFirebaseListener(user);   // écoute temps réel (uniquement si sync auto activée)
     }
   } else {
     document.getElementById('fb-login-form').style.display      = 'block';
@@ -8425,15 +8433,25 @@ function _startFirebaseListener(user) {
 
 function _applyRemoteData(data, updatedAt, msg = '🔄 Sync Firebase reçue') {
   _fbApplyingRemote = true;
-  if (Array.isArray(data.tasks))      { tasks      = data.tasks;      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
-  if (Array.isArray(data.todayTasks)) { todayTasks = data.todayTasks; saveToday(); }
-  if (Array.isArray(data.freeNotes))  { freeNotes  = data.freeNotes;  saveFreeNotes(); }
+  if (Array.isArray(data.tasks))       { tasks       = data.tasks;       localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); }
+  if (Array.isArray(data.todayTasks))  { todayTasks  = data.todayTasks;  saveToday(); }
+  if (Array.isArray(data.freeNotes))   { freeNotes   = data.freeNotes;   saveFreeNotes(); }
+  if (Array.isArray(data.focusTasks))  { focusTasks  = data.focusTasks;  saveFocusList(); }
+  if (Array.isArray(data.customQuads)) { customQuads = data.customQuads; saveCustomQuads(); }
+  if (data.layout) {
+    if (Array.isArray(data.layout.quadOrder))     { quadOrder     = data.layout.quadOrder;     localStorage.setItem('taskflow_quadorder', JSON.stringify(quadOrder)); }
+    if (data.layout.quadSizes)                    { quadSizes     = data.layout.quadSizes;     localStorage.setItem('taskflow_quadsize', JSON.stringify(quadSizes)); }
+    if (data.layout.quadCollapsed)                { quadCollapsed = data.layout.quadCollapsed; localStorage.setItem('taskflow_quadcollapse', JSON.stringify(quadCollapsed)); }
+    if (data.layout.snoozeSpanState)              { snoozeSpanState = data.layout.snoozeSpanState; localStorage.setItem('taskflow_snoozespan', snoozeSpanState); }
+    if (Array.isArray(data.layout.manualSortQuads)) { manualSortQuads = new Set(data.layout.manualSortQuads); localStorage.setItem('taskflow_manualsort', JSON.stringify([...manualSortQuads])); }
+  }
   const now = new Date().toLocaleString('fr-FR');
   localStorage.setItem('taskflow_fb_lastsync', now);
   if (updatedAt) localStorage.setItem('taskflow_fb_lastsync_at', updatedAt);
   updateFbLastSync();
   renderAll();
   if (currentView === 'notes') renderFreeNotes();
+  if (currentView === 'focus') renderFocus();
   if (msg) toast(msg, 'success');
   setTimeout(() => { _fbApplyingRemote = false; }, 1000);
 }
@@ -8509,7 +8527,9 @@ async function firebasePush(silent = false) {
       tasks,
       todayTasks,
       freeNotes,
-      layout: { quadOrder, quadSizes, quadCollapsed, snoozeSpanState },
+      focusTasks,
+      customQuads,
+      layout: { quadOrder, quadSizes, quadCollapsed, snoozeSpanState, manualSortQuads: [...manualSortQuads] },
       updatedAt
     });
     const now = new Date().toLocaleString('fr-FR');
