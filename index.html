@@ -8392,7 +8392,9 @@ const fbAuth = firebase.auth();
 const fbDb   = firebase.firestore();
 // Persister la session même après fermeture du navigateur
 fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-let fbAutoSync = localStorage.getItem('taskflow_fb_autosync') === '1'; // manuel par défaut
+// Sync automatique ACTIVÉE par défaut (nouvelle clé v2 pour réactiver sur tous les appareils).
+// Peut toujours être désactivée depuis la fenêtre Firebase.
+let fbAutoSync = localStorage.getItem('taskflow_fb_autosync_v2') !== '0';
 let _fbSnapshotUnsub = null; // listener temps réel
 let _fbPushTimeout   = null; // debounce push
 let _fbApplyingRemote = false; // évite les boucles
@@ -8478,7 +8480,11 @@ async function _firebasePullIfNewer() {
 
 // Appelée dans save() — debounce 2s pour éviter les push en rafale
 function fbSyncOnSave() {
-  if (!fbAutoSync || !fbAuth.currentUser || _fbApplyingRemote) return;
+  if (_fbApplyingRemote) return;
+  // Toute modification locale (tâches, aujourd'hui, notes, focus, quadrants) est marquée
+  // comme "fraîche" pour qu'un pull Firebase plus ancien ne l'écrase pas avant son envoi.
+  localStorage.setItem('taskflow_fb_lastsync_at', new Date().toISOString());
+  if (!fbAutoSync || !fbAuth.currentUser) return;
   clearTimeout(_fbPushTimeout);
   _fbPushTimeout = setTimeout(() => firebasePush(true), 2000);
 }
@@ -8490,6 +8496,10 @@ document.addEventListener('visibilitychange', () => {
     clearTimeout(_fbPushTimeout);
     _fbPushTimeout = null;
     firebasePush(true);
+  }
+  // Retour sur l'onglet / l'app : récupère la dernière version des données
+  if (document.visibilityState === 'visible' && fbAutoSync && fbAuth.currentUser && !_fbPushTimeout) {
+    _firebasePullIfNewer();
   }
 });
 
@@ -8562,7 +8572,7 @@ async function firebasePull() {
 // ── Auto-sync (activable/désactivable, manuel par défaut) ──
 function toggleFirebaseAutoSync(on) {
   fbAutoSync = on;
-  localStorage.setItem('taskflow_fb_autosync', on ? '1' : '0');
+  localStorage.setItem('taskflow_fb_autosync_v2', on ? '1' : '0');
   const user = fbAuth.currentUser;
   if (on && user) {
     _startFirebaseListener(user);
@@ -8609,6 +8619,44 @@ function openMobileDrawer() {
 function closeMobileDrawer() {
   document.getElementById('mobile-drawer').style.display = 'none';
 }
+
+// ── Mise à jour automatique du code (GitHub Pages) ──────────────────────────
+// Au chargement on mémorise la "signature" (ETag / Last-Modified) de index.html publiée.
+// Ensuite, à chaque retour sur l'app et toutes les 5 min, on compare : si GitHub Pages
+// sert une version plus récente, on envoie les données en attente puis on recharge.
+let _codeSignature = null;
+let _codeCheckAt   = 0;
+async function _getCodeSignature() {
+  if (location.protocol === 'file:') return null;
+  const url = location.pathname.replace(/[^/]*$/, '') + 'index.html?_v=' + Date.now();
+  const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+  if (!r.ok) return null;
+  return r.headers.get('etag') || r.headers.get('last-modified') || null;
+}
+async function checkForCodeUpdate() {
+  if (Date.now() - _codeCheckAt < 60000) return; // max 1 vérif / minute
+  _codeCheckAt = Date.now();
+  try {
+    const sig = await _getCodeSignature();
+    if (!sig) return;
+    if (_codeSignature === null) { _codeSignature = sig; return; }
+    if (sig !== _codeSignature) {
+      // Ne pas recharger pendant une saisie
+      const a = document.activeElement;
+      if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) {
+        _codeCheckAt = 0; return;
+      }
+      toast('🆕 Nouvelle version de TaskFlow — rechargement…', 'info');
+      if (_fbPushTimeout) { clearTimeout(_fbPushTimeout); _fbPushTimeout = null; await firebasePush(true); }
+      setTimeout(() => location.reload(), 800);
+    }
+  } catch (e) { /* hors ligne : on réessaiera plus tard */ }
+}
+window.addEventListener('load', () => { _codeCheckAt = 0; checkForCodeUpdate(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkForCodeUpdate();
+});
+setInterval(() => { if (document.visibilityState === 'visible') checkForCodeUpdate(); }, 5 * 60 * 1000);
 
 // ── Service Worker (PWA) ────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {

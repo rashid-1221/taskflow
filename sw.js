@@ -1,5 +1,5 @@
 // ── TaskFlow Service Worker ──────────────────────────────────────────────────
-const CACHE_VERSION = '2026-06-13-v3';
+const CACHE_VERSION = '2026-10-09-v4';
 const CACHE_NAME    = 'taskflow-' + CACHE_VERSION;
 
 const STATIC_ASSETS = [
@@ -47,12 +47,30 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // index.html → toujours réseau (jamais de cache)
-  if (url.pathname === '/taskflow/' || url.pathname === '/taskflow/index.html' || url.pathname.endsWith('/taskflow/')) {
+  // index.html → toujours la dernière version publiée sur GitHub.
+  // Le paramètre ?_v=... contourne aussi le cache CDN de GitHub Pages (~10 min).
+  // Une copie est gardée uniquement pour le mode hors ligne.
+  if (event.request.method === 'GET' &&
+      (url.pathname === '/taskflow/' || url.pathname === '/taskflow/index.html') &&
+      !url.searchParams.has('_v')) {
+    const fresh = url.pathname + (url.search ? url.search + '&' : '?') + '_v=' + Date.now();
     event.respondWith(
-      fetch(event.request, { cache: 'no-store' })
+      fetch(fresh, { cache: 'no-store' })
+        .then(response => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put('/taskflow/index.html', copy));
+          }
+          return response;
+        })
         .catch(() => caches.match('/taskflow/index.html'))
     );
+    return;
+  }
+
+  // Requêtes de vérification de version (?_v=) → réseau direct
+  if (url.searchParams.has('_v')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
 

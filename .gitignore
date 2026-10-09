@@ -12,3 +12,7 @@ sauvegarde/
 
 # Logs
 *.log
+
+# Synchro automatique
+git-sync.log
+diagnostic.txt
