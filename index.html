@@ -1561,11 +1561,37 @@
     background:rgba(230,184,0,.15);color:#e6b800;border:1px solid rgba(230,184,0,.35);
     border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:middle;animation:progressPulse 1.5s infinite; }
   .inprogress-active { color:#e6b800 !important; font-weight:700; }
+  .today-item.ti-inprogress { border-left: 3px solid #e6b800; }
   .task-card.planned-card { border-left: 3px solid var(--q2-color); }
   .task-card.planned-card .task-top::before {
   content: '📌'; font-size:.7rem; margin-right:4px; flex-shrink:0;
   }
   .planned-active { color: var(--q2-color) !important; font-weight:700; }
+
+  /* ── Suspendue (statut d'attente) ── */
+  .task-card.hold-card { border-left: 3px solid var(--hold-c,#a371f7); }
+  .hold-badge { display:inline-flex;align-items:center;gap:3px;font-size:.64rem;font-weight:700;
+    background:color-mix(in srgb, var(--hold-c,#a371f7) 15%, transparent);color:var(--hold-c,#a371f7);
+    border:1px solid color-mix(in srgb, var(--hold-c,#a371f7) 40%, transparent);
+    border-radius:4px;padding:1px 6px;margin-left:5px;vertical-align:middle;cursor:pointer;max-width:100%;
+    white-space:normal;line-height:1.35; }
+  .hold-badge .hold-days { opacity:.75;font-weight:500; }
+  .hold-active { font-weight:700; }
+  #hold-menu { position:fixed;z-index:100000;display:none;min-width:250px;max-width:300px;
+    background:var(--bg2,#161b22);color:var(--text,#e6edf3);border:1px solid var(--border,#30363d);
+    border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);padding:8px; }
+  #hold-menu.open { display:block; }
+  #hold-menu .hm-title { font-size:.75rem;color:var(--text2);padding:2px 6px 6px;font-weight:600; }
+  #hold-menu .hm-opt { display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;
+    border:1px solid transparent;color:var(--text);border-radius:6px;padding:6px 8px;font-size:.8rem;cursor:pointer; }
+  #hold-menu .hm-opt:hover { background:var(--bg3); }
+  #hold-menu .hm-opt.sel { border-color:var(--hc);background:color-mix(in srgb, var(--hc) 14%, transparent); }
+  #hold-menu .hm-dot { width:9px;height:9px;border-radius:50%;background:var(--hc);flex-shrink:0; }
+  #hold-menu input { width:100%;box-sizing:border-box;margin-top:6px;background:var(--bg3);color:var(--text);
+    border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:.78rem; }
+  #hold-menu .hm-row { display:flex;gap:6px;margin-top:8px; }
+  #hold-menu .hm-row button { flex:1;border-radius:6px;padding:6px;font-size:.78rem;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text); }
+  #hold-menu .hm-row .hm-ok { background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff); }
 
   /* ── Seen today badge on matrix cards ── */
   .task-card.seen-today .task-top::after {
@@ -1961,6 +1987,7 @@
     <button class="filter-chip"        data-filter="pending" onclick="setFilter('pending',this)">En cours</button>
     <button class="filter-chip"        data-filter="done"    onclick="setFilter('done',this)">Terminées</button>
     <button class="filter-chip"        data-filter="overdue" onclick="setFilter('overdue',this)">En retard</button>
+    <button class="filter-chip"        data-filter="hold"    onclick="setFilter('hold',this)">⏸ Suspendues</button>
     <button class="filter-chip"        data-filter="travail" onclick="setFilter('travail',this)">💼 Travail</button>
     <button class="filter-chip"        data-filter="perso"   onclick="setFilter('perso',this)">🏠 Perso</button>
     <button class="filter-chip"        data-filter="sante"   onclick="setFilter('sante',this)">❤️ Santé</button>
@@ -2982,6 +3009,7 @@ function getFiltered() {
     if (currentFilter === 'pending') return t.status !== 'done';
     if (currentFilter === 'done')    return t.status === 'done';
     if (currentFilter === 'overdue') return t.due && new Date(t.due) < new Date() && t.status !== 'done';
+    if (currentFilter === 'hold')    return !!getHold('task', t) && t.status !== 'done';
     if (['travail','perso','sante','finance','autre'].includes(currentFilter)) return t.tag === currentFilter;
     return true;
   }).filter(t => !q || t.title.toLowerCase().includes(q) || (t.desc||'').toLowerCase().includes(q));
@@ -3046,7 +3074,8 @@ function renderQuad(q, filtered) {
 
 function makeCard(t) {
   const div = document.createElement('div');
-  div.className = 'task-card' + (t.status==='done'?' done':'') + (matrixSelected.has(t.id)?' mat-selected':'') + (t.planned?' planned-card':'') + (t.inProgress?' inprogress-card':'');
+  div.className = 'task-card' + (t.status==='done'?' done':'') + (matrixSelected.has(t.id)?' mat-selected':'') + (t.planned?' planned-card':'') + (t.inProgress?' inprogress-card':'') + (getHold('task',t)?' hold-card':'');
+  if (getHold('task',t)) div.style.setProperty('--hold-c', HOLD_REASONS[getHold('task',t).reason].color);
   div.draggable = true;
   div.dataset.id = t.id;
 
@@ -3137,7 +3166,7 @@ function makeCard(t) {
     <input type="checkbox" class="mat-checkbox" ${matrixSelected.has(t.id)?'checked':''} onclick="event.stopPropagation();toggleMatrixCard('${t.id}')">
     <div class="task-top">
       <div class="task-check" onclick="toggleDone('${t.id}',event)">${t.status==='done'?'✓':''}</div>
-      <div class="task-title">${escHtml(t.title)}${t.inProgress?'<span class="inprogress-badge">⚙️ En cours</span>':''}</div>
+      <div class="task-title">${escHtml(t.title)}${t.inProgress?'<span class="inprogress-badge">⚙️ En cours</span>':''}${holdBadgeHtml('task',t)}</div>
     </div>
     <div class="task-meta">
       ${t.tag ? `<span class="task-tag tag-${t.tag}">${tagLabel(t.tag)}</span>` : ''}
@@ -3164,6 +3193,7 @@ function makeCard(t) {
       <button class="task-btn" onclick="snoozeTask('${t.id}',event)" style="color:var(--text3)">📦 1 sem.</button>
       <button class="task-btn" onclick="copyTaskTitle('${t.id}',event)" title="Copier le titre">📋 Copier</button>
       <button class="task-btn ${t.inProgress?'inprogress-active':''}" onclick="toggleInProgress('${t.id}',event)" title="${t.inProgress?'Retirer En cours':'Marquer En cours de traitement'}" style="color:${t.inProgress?'#e6b800':'var(--text3)'}">⚙️${t.inProgress?' En cours':''}</button>
+      ${holdBtnHtml('task',t,'task-btn')}
       <button class="task-btn ${t.planned?'planned-active':''}" onclick="togglePlanned('${t.id}',event)" title="${t.planned?'Retirer planifiée':'Marquer comme planifiée'}" style="color:${t.planned?'var(--q2-color)':'var(--text3)'}">📌${t.planned?' Planifiée':''}</button>
       <button class="task-btn" onclick="addToCalendar('${t.id}')" title="Ajouter à Google Agenda" style="color:var(--q2-color)">📅 Agenda</button>
       <button class="task-btn" onclick="emailTask('${t.id}')" title="Envoyer par email">📧 Email</button>
@@ -3793,7 +3823,7 @@ function renderFocus() {
     div.innerHTML = `
       <div class="focus-item-top">
         <div class="fi-check" onclick="toggleFocusDone('${t.id}')">${t.done ? '✓' : ''}</div>
-        <div class="fi-title">${escHtml(t.title)}</div>
+        <div class="fi-title">${escHtml(t.title)}${inProgressBadgeHtml('focus',t)}${holdBadgeHtml('focus',t)}</div>
         <span class="fi-origin" title="Origine">${originLbl}</span>
       </div>
       ${lastNote ? `<div class="ti-comment-preview">💬 ${escHtml(lastNote.text)}</div>` : ''}
@@ -3821,6 +3851,8 @@ function renderFocus() {
         <button class="fi-btn" onclick="sendFocusToToday('${t.id}')" title="Déplacer vers Aujourd'hui" style="color:var(--gold)">☀️ Aujourd'hui</button>
         <button class="fi-btn" onclick="openMoveFocus('${t.id}')" title="Classer dans une matrice">↗ Déplacer</button>
         <button class="fi-btn" onclick="openFiSubnoteForm('${t.id}',event)">📝 Sous-note</button>
+        ${inProgressBtnHtml('focus',t,'fi-btn')}
+        ${holdBtnHtml('focus',t,'fi-btn')}
         <button class="fi-btn" onclick="toggleFiCommentForm('${t.id}')">💬 Note</button>
         <button class="fi-btn" onclick="openEditFromFocus('${t.id}',event)">✏️ Éditer</button>
         <button class="fi-btn" onclick="copyFocusTitle('${t.id}')" title="Copier le titre">📋 Copier</button>
@@ -4111,7 +4143,7 @@ function deleteFocusTask(id) {
 
 function makeTodayItem(t) {
   const wrap = document.createElement('div');
-  wrap.className = 'today-item' + (t.done?' ti-done':'') + (t.reviewed&&!t.done?' ti-reviewed':'');
+  wrap.className = 'today-item' + (t.done?' ti-done':'') + (t.reviewed&&!t.done?' ti-reviewed':'') + (isInProgress('today',t)?' ti-inprogress':'');
   wrap.dataset.tid = t.id;
 
   const oq = t.originQuad;
@@ -4142,7 +4174,7 @@ function makeTodayItem(t) {
       <input type="checkbox" class="ti-checkbox" ${todaySelected.has(t.id)?'checked':''} onchange="toggleSelectItem('${t.id}',this.checked)" />
       <span class="ti-drag-handle" title="Glisser pour réordonner">⠿</span>
       <div class="ti-check" onclick="toggleTodayDone('${t.id}')">${t.done?'✓':''}</div>
-      <div class="ti-title">${escHtml(t.title)}</div>
+      <div class="ti-title">${escHtml(t.title)}${inProgressBadgeHtml('today',t)}${holdBadgeHtml('today',t)}</div>
       ${originBadge}
       <button class="ti-focus-btn" onclick="toggleFocus('${t.id}',event)" title="Mettre en focus (max 3)">⭐</button>
       <button class="ti-reviewed-btn${t.reviewed?' reviewed':''}" onclick="toggleTodayReviewed('${t.id}')" title="${t.reviewed?'Marquer comme non revu':'Marquer comme revu aujourd\'hui'}">${t.reviewed?'👁 Revu':'👁'}</button>
@@ -4179,6 +4211,8 @@ function makeTodayItem(t) {
       </select>
       <button class="ti-focus-action-btn${focusIds.has(t.id)?' active':''}" id="tfab-${t.id}" onclick="toggleFocus('${t.id}',event)" title="Mettre en focus — remonte en tête de liste">⭐ Focus</button>
       <button class="ti-focus-action-btn" onclick="sendTodayToFocus('${t.id}',event)" title="Déplacer vers l'onglet Focus">🎯 → Focus</button>
+      ${inProgressBtnHtml('today',t,'ti-comment-btn')}
+      ${holdBtnHtml('today',t,'ti-comment-btn')}
       <button class="ti-comment-btn" onclick="toggleTiCommentForm('${t.id}')">💬 Note</button>
       <button class="ti-comment-btn" onclick="openEditFromToday('${t.id}',event)">✏️ Éditer</button>
       <button class="ti-comment-btn" onclick="copyTodayTitle('${t.id}')">📋 Copier</button>
@@ -5784,6 +5818,172 @@ function copyTaskTitle(id, e)     { const t=tasks.find(x=>x.id===id); if(t) copy
 function copyTodayTitle(id)        { const t=todayTasks.find(x=>x.id===id); if(t) copyTitle(t.title); }
 function copyFreeNoteTitle(id)     { const n=freeNotes.find(x=>x.id===id); if(n) copyTitle(n.title||n.body?.split('\n')[0]||''); }
 
+
+// ═══════════════════════════════════════════════
+//  SUSPENDUE — statut d'attente (tâches, Aujourd'hui, Focus, notes)
+// ═══════════════════════════════════════════════
+const HOLD_REASONS = {
+  dispo:      { icon:'⏳', label:'En attente de disponibilité', color:'#d29922' },
+  traitement: { icon:'⚙️', label:'En cours de traitement',      color:'#58a6ff' },
+  reponse:    { icon:'💬', label:'En attente de réponse',       color:'#a371f7' },
+  validation: { icon:'✅', label:'En attente de validation',    color:'#3fb950' },
+  livraison:  { icon:'📦', label:'En attente de livraison / matériel', color:'#ffa657' },
+  tiers:      { icon:'👤', label:'Dépend d\'une autre personne', color:'#ff7b72' },
+  budget:     { icon:'💰', label:'En attente de budget / devis', color:'#e3b341' },
+  autre:      { icon:'⏸', label:'Autre raison',                 color:'#8b949e' },
+};
+function _holdList(kind) {
+  return kind==='today' ? todayTasks : kind==='focus' ? focusTasks : kind==='note' ? freeNotes : tasks;
+}
+function _holdSave(kind) {
+  if (kind==='today') saveToday();
+  else if (kind==='focus') saveFocusList();
+  else if (kind==='note') saveFreeNotes();
+  else save();
+}
+function _holdOrigin(kind, item) {
+  if ((kind==='today'||kind==='focus') && item && item.originTaskId) return tasks.find(x=>x.id===item.originTaskId) || null;
+  return null;
+}
+function getHold(kind, item) {
+  if (!item) return null;
+  if (item.hold && HOLD_REASONS[item.hold.reason]) return item.hold;
+  const o = _holdOrigin(kind, item);
+  return (o && o.hold && HOLD_REASONS[o.hold.reason]) ? o.hold : null;
+}
+function holdBadgeHtml(kind, item) {
+  const h = getHold(kind, item); if (!h) return '';
+  const r = HOLD_REASONS[h.reason];
+  const days = h.since ? Math.floor((Date.now()-h.since)/86400000) : 0;
+  const label = (h.reason==='autre' && h.detail) ? h.detail : r.label;
+  const extra = (h.reason!=='autre' && h.detail) ? ` — ${escHtml(h.detail)}` : '';
+  const since = h.since ? `depuis le ${new Date(h.since).toLocaleDateString('fr-FR')}` : '';
+  return `<span class="hold-badge" style="--hold-c:${r.color}" title="Suspendue : ${escHtml(label)} ${since}" onclick="openHoldMenu('${kind}','${item.id}',event)">${r.icon} ${escHtml(label)}${extra}${days>0?` <span class="hold-days">· ${days}j</span>`:''}</span>`;
+}
+function holdBtnHtml(kind, item, cls) {
+  const h = getHold(kind, item);
+  const r = h ? HOLD_REASONS[h.reason] : null;
+  return `<button class="${cls} ${h?'hold-active':''}" onclick="openHoldMenu('${kind}','${item.id}',event)" title="Marquer comme suspendue (en attente…)" style="color:${r?r.color:'var(--text3)'}">${h?r.icon+' Suspendue':'⏸ Statut'}</button>`;
+}
+let _holdCtx = null;
+function _ensureHoldMenu() {
+  let m = document.getElementById('hold-menu');
+  if (m) return m;
+  m = document.createElement('div'); m.id = 'hold-menu';
+  m.addEventListener('click', e => e.stopPropagation());
+  m.addEventListener('mousedown', e => e.stopPropagation());
+  document.body.appendChild(m);
+  document.addEventListener('mousedown', () => closeHoldMenu());
+  document.addEventListener('keydown', e => { if (e.key==='Escape') closeHoldMenu(); });
+  return m;
+}
+function openHoldMenu(kind, id, e) {
+  if (e) { e.stopPropagation(); e.preventDefault(); }
+  const item = _holdList(kind).find(x=>x.id===id); if (!item) return;
+  const cur = getHold(kind, item);
+  _holdCtx = { kind, id, reason: cur ? cur.reason : null };
+  const m = _ensureHoldMenu();
+  m.innerHTML = `<div class="hm-title">⏸ Pourquoi cette ${kind==='note'?'note':'tâche'} est-elle suspendue ?</div>
+    ${Object.entries(HOLD_REASONS).map(([k,r])=>`<button class="hm-opt${cur&&cur.reason===k?' sel':''}" style="--hc:${r.color}" data-r="${k}" onclick="pickHoldReason('${k}')"><span class="hm-dot"></span>${r.icon} ${r.label}</button>`).join('')}
+    <input id="hold-detail" type="text" maxlength="120" placeholder="Précision (ex : réponse d'Inetum, retour de Karim…)" value="${cur&&cur.detail?escHtml(cur.detail):''}">
+    <div class="hm-row">
+      ${cur?'<button onclick="clearHold()" title="Retirer le statut">✕ Retirer</button>':''}
+      <button class="hm-ok" onclick="applyHold()">✓ Valider</button>
+    </div>`;
+  const inp = m.querySelector('#hold-detail');
+  inp.addEventListener('keydown', ev => { if (ev.key==='Enter') { ev.preventDefault(); applyHold(); } });
+  m.classList.add('open');
+  const x = e ? e.clientX : window.innerWidth/2, y = e ? e.clientY : window.innerHeight/2;
+  const w = m.offsetWidth, h = m.offsetHeight;
+  m.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + 'px';
+  m.style.top  = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
+}
+function pickHoldReason(k) {
+  if (!_holdCtx) return;
+  _holdCtx.reason = k;
+  document.querySelectorAll('#hold-menu .hm-opt').forEach(b=>b.classList.toggle('sel', b.dataset.r===k));
+  document.getElementById('hold-detail')?.focus();
+}
+function closeHoldMenu() {
+  document.getElementById('hold-menu')?.classList.remove('open');
+  _holdCtx = null;
+}
+function _holdRerender(kind) {
+  renderAll();
+  if (kind==='focus' || currentView==='focus') renderFocus();
+  if (kind==='today' || currentView==='today') renderToday();
+  if (kind==='note') renderFreeNotes();
+}
+function applyHold() {
+  if (!_holdCtx) return;
+  const { kind, id, reason } = _holdCtx;
+  if (!reason) { toast('Choisis une raison', 'error'); return; }
+  const item = _holdList(kind).find(x=>x.id===id); if (!item) return closeHoldMenu();
+  const detail = (document.getElementById('hold-detail')?.value || '').trim();
+  const prev = getHold(kind, item);
+  const hold = { reason, detail, since: (prev && prev.reason===reason) ? (prev.since||Date.now()) : Date.now() };
+  item.hold = hold;
+  const o = _holdOrigin(kind, item);
+  if (o) { o.hold = { ...hold }; save(); }
+  // Propager aux copies Aujourd'hui / Focus d'une tâche de la matrice
+  if (kind==='task') {
+    todayTasks.filter(ti=>ti.originTaskId===id).forEach(ti=>ti.hold={...hold});
+    focusTasks.filter(fi=>fi.originTaskId===id).forEach(fi=>fi.hold={...hold});
+    saveToday(); saveFocusList();
+  }
+  if (typeof pushHistory==='function') pushHistory(`Suspendue (${HOLD_REASONS[reason].label}) — "${item.title||''}"`);
+  _holdSave(kind);
+  closeHoldMenu();
+  _holdRerender(kind);
+  toast(`${HOLD_REASONS[reason].icon} ${HOLD_REASONS[reason].label}`, 'info');
+}
+function clearHold() {
+  if (!_holdCtx) return;
+  const { kind, id } = _holdCtx;
+  const item = _holdList(kind).find(x=>x.id===id); if (!item) return closeHoldMenu();
+  delete item.hold;
+  const o = _holdOrigin(kind, item);
+  const taskId = kind==='task' ? id : (o ? o.id : null);
+  if (o) { delete o.hold; save(); }
+  if (taskId) {
+    todayTasks.filter(ti=>ti.originTaskId===taskId).forEach(ti=>delete ti.hold);
+    focusTasks.filter(fi=>fi.originTaskId===taskId).forEach(fi=>delete fi.hold);
+    saveToday(); saveFocusList();
+  }
+  if (typeof pushHistory==='function') pushHistory(`Statut retiré — "${item.title||''}"`);
+  _holdSave(kind);
+  closeHoldMenu();
+  _holdRerender(kind);
+  toast('▶ Statut retiré', 'info');
+}
+
+// ── "En cours" pour Aujourd'hui / Focus (y compris tâches saisies directement) ──
+function isInProgress(kind, item) {
+  if (!item) return false;
+  if (item.inProgress) return true;
+  const o = _holdOrigin(kind, item);
+  return !!(o && o.inProgress);
+}
+function inProgressBadgeHtml(kind, item) {
+  return isInProgress(kind, item) ? '<span class="inprogress-badge">⚙️ En cours</span>' : '';
+}
+function inProgressBtnHtml(kind, item, cls) {
+  const on = isInProgress(kind, item);
+  return `<button class="${cls} ${on?'inprogress-active':''}" onclick="toggleInProgressItem('${kind}','${item.id}',event)" title="${on?'Retirer En cours':'Marquer En cours de traitement'}" style="color:${on?'#e6b800':'var(--text3)'}">⚙️${on?' En cours':''}</button>`;
+}
+function toggleInProgressItem(kind, id, e) {
+  if (e) e.stopPropagation();
+  const item = _holdList(kind).find(x=>x.id===id); if (!item) return;
+  const on = !isInProgress(kind, item);
+  if (on) item.inProgress = true; else delete item.inProgress;
+  const o = _holdOrigin(kind, item);
+  if (o) { if (on) o.inProgress = true; else delete o.inProgress; save(); }
+  if (typeof pushHistory==='function') pushHistory(`${on?'Marqué':'Retiré'} "En cours" — "${item.title||''}"`);
+  _holdSave(kind);
+  _holdRerender(kind);
+  toast(on ? '⚙️ En cours de traitement' : '⚙️ Retiré des tâches en cours', 'info');
+}
+
 // ═══════════════════════════════════════════════
 //  PLANIFIÉE
 // ═══════════════════════════════════════════════
@@ -7305,13 +7505,14 @@ function renderFreeNotes() {
     card.innerHTML = `
       <div class="fn-drag-handle">
         <span class="fn-drag-dots">⠿⠿</span>
-        <span class="fn-drag-label" style="font-size:.75rem;color:var(--text2);opacity:.9;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escHtml(n.title)||'Sans titre'}</span>
+        ${getHold('note',n)?`<span title="${escHtml(HOLD_REASONS[getHold('note',n).reason].label)}">${HOLD_REASONS[getHold('note',n).reason].icon}</span>`:''}<span class="fn-drag-label" style="font-size:.75rem;color:var(--text2);opacity:.9;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escHtml(n.title)||'Sans titre'}</span>
         <button class="fn-collapse-btn" title="${n.collapsed?'Agrandir':'Réduire'}"
                 onclick="toggleCollapseNote('${n.id}')">${n.collapsed?'▶':'▼'}</button>
       </div>
       <div class="fn-card-body">
         <input class="free-note-title" placeholder="Titre…" value="${escHtml(n.title)}"
                oninput="updateFreeNote('${n.id}','title',this.value)" />
+        ${getHold('note',n)?`<div style="margin:2px 0 4px">${holdBadgeHtml('note',n).replace('margin-left:5px','')}</div>`:''}
         <div class="fn-toolbar">
           <button class="fn-tb-btn" title="Gras (Ctrl+B)"
                   onmousedown="event.preventDefault();fnFormat('${n.id}','bold')"><b>B</b></button>
@@ -7351,6 +7552,7 @@ function renderFreeNotes() {
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="free-note-del" onclick="openFnSubnoteForm('${n.id}')" style="color:var(--accent)">＋ Sous-note</button>
+            ${holdBtnHtml('note',n,'free-note-del')}
             <button class="free-note-del" onclick="copyFreeNoteTitle('${n.id}')">📋</button>
             <button class="free-note-del" onclick="addFreeNoteToCalendar('${n.id}')" style="color:var(--q2-color)">📅</button>
             <button class="free-note-del" onclick="emailFreeNote('${n.id}')" title="Email">📧</button>
